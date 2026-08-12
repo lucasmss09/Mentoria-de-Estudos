@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentor de Estudos · Concursos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bp-bg: #123b2d;
+    --bp-bg-deep: #0a2a20;
+    --bp-line: #7fcf9f;
+    --bp-line-soft: rgba(127,207,159,0.22);
+    --bp-line-faint: rgba(127,207,159,0.10);
+    --paper: #f5f1e6;
+    --paper-dim: #ece6d6;
+    --ink: #16231c;
+    --ink-soft: #5a6b5f;
+    --amber: #e8a33d;
+    --amber-deep: #c98420;
+    --red: #c9553f;
+    --success: #3f8a5f;
+    --success-deep: #2f6b47;
+    --tag-geral: #6b7a4f;
+    --tag-geral-bg: #eef1e2;
+    --tag-rev: #7a5fb0;
+    --tag-rev-bg: #f1eafa;
+    --white: #fdfcf8;
+    --radius: 3px;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family: var(--font-body);
+    background:
+      linear-gradient(var(--bp-line-faint) 1px, transparent 1px) 0 0/28px 28px,
+      linear-gradient(90deg, var(--bp-line-faint) 1px, transparent 1px) 0 0/28px 28px,
+      var(--bp-bg);
+    color: var(--white);
+    min-height:100vh;
+    padding: 18px;
+  }
+  .wrap{ max-width: 1260px; margin: 0 auto; }
+
+  .titleblock{
+    border: 1.5px solid var(--bp-line);
+    background: var(--bp-bg-deep);
+    display:grid;
+    grid-template-columns: 1fr auto;
+    position:relative;
+  }
+  .titleblock::before, .titleblock::after,
+  .appshell::before, .appshell::after{
+    content:"";
+    position:absolute;
+    width:10px; height:10px;
+    border: 1.5px solid var(--amber);
+    z-index:2;
+  }
+  .titleblock::before{ top:-1.5px; left:-1.5px; border-right:none; border-bottom:none; }
+  .titleblock::after{ bottom:-1.5px; right:-1.5px; border-left:none; border-top:none; }
+
+  .tb-main{ padding: 18px 22px; }
+  .tb-eyebrow{
+    font-family: var(--font-mono); font-size:11px; letter-spacing:.14em;
+    color: var(--bp-line); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .tb-eyebrow .switch-link{ text-decoration:underline; cursor:pointer; opacity:.85; }
+  .tb-eyebrow .switch-link:hover{ opacity:1; color:var(--white); }
+  .tb-title{
+    font-family: var(--font-display); font-weight:700; font-size: 24px;
+    line-height:1.15; color: var(--white); margin:0 0 4px 0;
+  }
+  .tb-sub{ font-size:13.5px; color: var(--bp-line); }
+  .tb-fields{
+    display:grid; grid-template-columns: repeat(2, minmax(120px,1fr));
+    border-left: 1.5px solid var(--bp-line);
+  }
+  .tb-field{
+    padding: 10px 16px; border-bottom: 1px solid var(--bp-line-soft);
+    border-right: 1px solid var(--bp-line-soft);
+    min-width:130px;
+  }
+  .tb-field:nth-child(2n){ border-right:none; }
+  .tb-field-label{
+    font-family: var(--font-mono); font-size:9.5px; letter-spacing:.1em;
+    color: var(--bp-line); text-transform:uppercase; margin-bottom:3px;
+  }
+  .tb-field-value{ font-family: var(--font-mono); font-size:15px; color: var(--white); font-weight:500;}
+  .tb-field-value.big{ font-size:22px; color:var(--amber); font-weight:600; }
+
+  .appshell{
+    display:flex; align-items:stretch;
+    border: 1.5px solid var(--bp-line); border-top:none;
+    background: var(--paper);
+    position:relative;
+    min-height: 520px;
+  }
+  .appshell::before{ top:8px; left:8px; border-right:none; border-bottom:none; border-color: var(--ink-soft); opacity:.3;}
+  .appshell::after{ bottom:8px; right:8px; border-left:none; border-top:none; border-color: var(--ink-soft); opacity:.3;}
+
+  .sidenav{
+    width:220px; flex-shrink:0;
+    background: var(--bp-bg-deep);
+    border-right: 1.5px solid var(--bp-line);
+    padding: 16px 0;
+    display:flex; flex-direction:column; justify-content:space-between;
+  }
+  .sidenav-nav{ display:flex; flex-direction:column; }
+  .sidenav button{
+    display:block; width:100%; text-align:left; cursor:pointer;
+    background:transparent; border:none; border-left:3px solid transparent;
+    color: var(--bp-line); padding: 11px 18px; transition: background .15s, color .15s;
+  }
+  .sidenav button .code{ display:block; font-family:var(--font-mono); font-size:10px; letter-spacing:.08em; opacity:.8; margin-bottom:2px;}
+  .sidenav button .label{ display:block; font-family:var(--font-body); font-size:13.5px; font-weight:600;}
+  .sidenav button:hover{ background: rgba(127,207,159,0.08); color:var(--white); }
+  .sidenav button.active{ border-left-color: var(--amber); background: rgba(232,163,61,0.14); color:var(--white); }
+
+  .content-area{ flex:1; min-width:0; padding: 26px 26px 32px; color: var(--ink); }
+
+  @media(max-width:760px){
+    .appshell{ flex-direction:column; }
+    .sidenav{ width:100%; display:flex; overflow-x:auto; border-right:none; border-bottom:1.5px solid var(--bp-line); padding:0; }
+    .sidenav button{ width:auto; white-space:nowrap; border-left:none; border-bottom:3px solid transparent; padding:10px 14px;}
+    .sidenav button.active{ border-left:none; border-bottom-color:var(--amber);}
+  }
+
+  h2.sheet-title{
+    font-family: var(--font-display); font-size:20px; font-weight:700;
+    margin: 0 0 3px 0; color: var(--ink);
+  }
+  .sheet-desc{ font-size:13px; color: var(--ink-soft); margin-bottom:20px; max-width:640px; }
+  .sheet{ display:none; }
+  .sheet.active{ display:block; }
+
+  .grid{ display:grid; gap:14px; }
+  .grid-4{ grid-template-columns: repeat(4, 1fr); }
+  .grid-2{ grid-template-columns: repeat(2, 1fr); }
+  .grid-3{ grid-template-columns: repeat(3, 1fr); }
+  @media(max-width:900px){ .grid-4{grid-template-columns:repeat(2,1fr);} .grid-3{grid-template-columns:repeat(1,1fr);} .grid-2{grid-template-columns:1fr;} }
+  @media(max-width:560px){ .grid-4{grid-template-columns:1fr;} }
+
+  .card{
+    background: var(--white); border: 1px solid #ded6c1;
+    border-radius: var(--radius); padding: 14px 16px;
+  }
+  .stat-label{ font-family: var(--font-mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color: var(--ink-soft); margin-bottom:6px;}
+  .stat-value{ font-family: var(--font-mono); font-size:28px; font-weight:600; color: var(--ink); }
+  .stat-value.amber{ color: var(--amber-deep); }
+  .stat-value.green{ color: var(--success-deep); }
+  .stat-sub{ font-size:11.5px; color: var(--ink-soft); margin-top:2px;}
+
+  .callout{
+    border-left: 3px solid var(--amber); background: #fbf3e2;
+    padding: 12px 14px; font-size:13px; line-height:1.55; margin-bottom:18px; border-radius: 0 var(--radius) var(--radius) 0;
+  }
+  .callout b{ color: var(--amber-deep); }
+  .callout.info{ border-left-color: var(--success-deep); background:#eaf3ec; }
+  .callout.info b{ color: var(--success-deep); }
+  .callout.red{ border-left-color: var(--red); background:#faeae6; }
+  .callout.red b{ color: var(--red); }
+
+  .ruler{ height:16px; background:#e7e0cc; border:1px solid #cfc6ab; border-radius:2px; position:relative; overflow:hidden;}
+  .ruler-fill{ height:100%; background: repeating-linear-gradient(90deg, var(--amber), var(--amber) 6px, var(--amber-deep) 6px, var(--amber-deep) 7px); transition: width .3s; }
+  .ruler-fill.green{ background: repeating-linear-gradient(90deg, var(--success), var(--success) 6px, var(--success-deep) 6px, var(--success-deep) 7px); }
+  .ruler-fill.red{ background: repeating-linear-gradient(90deg, var(--red), var(--red) 6px, #a8402c 6px, #a8402c 7px); }
+  .ruler-label{ font-family: var(--font-mono); font-size:11px; margin-top:4px; color:var(--ink-soft); display:flex; justify-content:space-between;}
+
+  section.block{ margin-bottom:26px; }
+  h3.block-title{
+    font-family: var(--font-display); font-size:14.5px; font-weight:700; color:var(--ink);
+    margin:0 0 10px 0; display:flex; align-items:center; gap:8px;
+  }
+  h3.block-title .num{ font-family:var(--font-mono); font-size:11px; color:var(--amber-deep); border:1px solid var(--amber-deep); padding:1px 6px; border-radius:2px;}
+
+  .today-card{
+    background: var(--bp-bg); color:var(--white); border-radius: var(--radius);
+    padding: 16px 18px; margin-bottom:20px; border:1px solid var(--bp-bg-deep);
+    background-image: linear-gradient(var(--bp-line-faint) 1px, transparent 1px), linear-gradient(90deg, var(--bp-line-faint) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .today-card .lbl{ font-family:var(--font-mono); font-size:10.5px; letter-spacing:.1em; color:var(--bp-line); text-transform:uppercase; margin-bottom:8px;}
+  .today-item{ display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,0.15); }
+  .today-item:last-child{ border-bottom:none; }
+  .today-item .tag{ font-family:var(--font-mono); font-size:9.5px; padding:2px 6px; border-radius:2px; background:var(--amber); color:var(--bp-bg-deep); white-space:nowrap; margin-top:1px; }
+  .today-item .tag.rev{ background:#b39ddb; color:#2c1a4a; }
+  .today-item .tx{ font-size:13.5px; line-height:1.4; }
+  .today-item .tx small{ display:block; color:var(--bp-line); font-size:11px; margin-top:2px;}
+
+  .chk-row{ display:flex; align-items:flex-start; gap:10px; padding:9px 4px; border-bottom:1px solid #eae3cf; }
+  .chk-row:last-child{ border-bottom:none; }
+  .chk-row input[type=checkbox]{ width:17px; height:17px; margin-top:2px; accent-color: var(--amber-deep); cursor:pointer; flex-shrink:0;}
+  .chk-row .txt{ flex:1; font-size:13.5px; line-height:1.4; }
+  .chk-row .txt .done{ text-decoration: line-through; color:#9a9282; }
+  .chk-row .meta{ font-size:11px; color:var(--ink-soft); margin-top:2px; font-family:var(--font-mono);}
+  .chk-row .badges{ display:flex; gap:6px; margin-left:auto; flex-shrink:0; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+  .badge{ font-family:var(--font-mono); font-size:9.5px; padding:2px 6px; border-radius:2px; border:1px solid; white-space:nowrap; height:fit-content;}
+  .badge.geral{ color:var(--tag-geral); border-color:var(--tag-geral); background:var(--tag-geral-bg);}
+  .badge.especifico{ color:var(--amber-deep); border-color:var(--amber-deep); background:#fbf3e2;}
+  .badge.forte{ color:var(--success-deep); border-color:var(--success-deep); background:#eaf4ee;}
+  .badge.revisado{ color:var(--tag-rev); border-color:var(--tag-rev); background:var(--tag-rev-bg);}
+  .badge.prioridade{ color:var(--ink); border-color:var(--ink-soft); background:#fff; font-weight:600;}
+  .badge.ativo{ color:var(--success-deep); border-color:var(--success-deep); background:#eaf4ee; font-weight:600;}
+
+  .week-block{ margin-bottom:18px; border:1px solid #ded6c1; border-radius:var(--radius); overflow:hidden;}
+  .week-head{ background:var(--paper-dim); padding:8px 14px; font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--ink); display:flex; justify-content:space-between;}
+  .day-row{ padding: 10px 14px; border-top:1px solid #eae3cf; }
+  .day-row.today{ background:#fbf3e2; }
+  .day-head{ display:flex; align-items:baseline; gap:8px; margin-bottom:6px; flex-wrap:wrap;}
+  .day-date{ font-family:var(--font-mono); font-weight:600; font-size:13px; color:var(--ink); }
+  .day-name{ font-size:11.5px; color:var(--ink-soft); text-transform:capitalize;}
+  .day-tag-today{ font-family:var(--font-mono); font-size:9.5px; background:var(--amber-deep); color:white; padding:1px 6px; border-radius:2px;}
+  .day-tag-rev{ font-family:var(--font-mono); font-size:9.5px; background:var(--tag-rev); color:white; padding:1px 6px; border-radius:2px;}
+  .day-subhead{ font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin:8px 0 2px;}
+  .q-reminder{ font-size:12px; color:var(--ink-soft); font-style:italic; padding:6px 0 0; }
+
+  .week-grid{ display:grid; grid-template-columns: repeat(6, 1fr); gap:10px; }
+  @media(max-width:900px){ .week-grid{ grid-template-columns: repeat(3,1fr);} }
+  @media(max-width:560px){ .week-grid{ grid-template-columns: repeat(2,1fr);} }
+  .wg-card{ background:var(--white); border:1px solid #ded6c1; border-radius:var(--radius); padding:10px; min-height:120px;}
+  .wg-card.today{ border-color:var(--amber-deep); box-shadow: 0 0 0 1px var(--amber-deep) inset;}
+  .wg-head{ font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--ink); display:flex; justify-content:space-between; margin-bottom:6px;}
+  .wg-head .dn{ text-transform:capitalize; color:var(--ink-soft); font-weight:400;}
+  .wg-pill{ font-family:var(--font-mono); font-size:9.5px; padding:2px 5px; border-radius:2px; }
+  .wg-pill.study{ background:var(--tag-geral-bg); color:var(--tag-geral); }
+  .wg-pill.spec{ background:#fbf3e2; color:var(--amber-deep); }
+  .wg-pill.rev{ background:var(--tag-rev-bg); color:var(--tag-rev); }
+  .wg-item{ font-size:11px; line-height:1.4; color:var(--ink); padding:2px 0; }
+  .wg-empty{ font-size:11px; color:var(--ink-soft); font-style:italic; }
+
+  button.btn{
+    font-family: var(--font-mono); font-size:12.5px; font-weight:600; letter-spacing:.02em;
+    background: var(--amber-deep); color:var(--white); border:none; border-radius:2px;
+    padding:9px 16px; cursor:pointer; transition:background .15s;
+  }
+  button.btn:hover{ background:#a86a13; }
+  button.btn.secondary{ background:transparent; color:var(--ink); border:1px solid var(--ink-soft); }
+  button.btn.secondary:hover{ background:#eee7d3; }
+  button.btn.small{ padding:5px 10px; font-size:11px; }
+  button.btn.danger{ background:transparent; color:var(--red); border:1px solid var(--red); }
+  button.btn.danger:hover{ background:#faeae6; }
+
+  label.f-label{ display:block; font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin-bottom:4px;}
+  input[type=text], input[type=number], input[type=date], select, textarea{
+    width:100%; font-family:var(--font-body); font-size:13.5px; padding:8px 9px;
+    border:1px solid #cfc6ab; border-radius:2px; background:var(--white); color:var(--ink);
+  }
+  textarea{ min-height:60px; resize:vertical; }
+  textarea.mono{ font-family:var(--font-mono); font-size:12px; min-height:160px; }
+  .form-row{ margin-bottom:12px; }
+  .form-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:12px; }
+  @media(max-width:700px){ .form-grid{grid-template-columns:1fr 1fr;} }
+
+  table.data-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  table.data-table th{ text-align:left; font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); border-bottom:1.5px solid var(--ink-soft); padding:7px 8px;}
+  table.data-table td{ padding:8px 8px; border-bottom:1px solid #eae3cf; vertical-align:top;}
+  table.data-table tr:last-child td{ border-bottom:none; }
+
+  .settings-box{ background:var(--paper-dim); border:1px solid #ded6c1; border-radius:var(--radius); padding:14px 16px; margin-bottom:22px;}
+  .dow-picker{ display:flex; gap:6px; flex-wrap:wrap; }
+  .dow-picker label{ font-family:var(--font-mono); font-size:11px; display:flex; align-items:center; gap:4px; background:var(--white); border:1px solid #cfc6ab; padding:5px 8px; border-radius:2px; cursor:pointer; color:var(--ink);}
+
+  .chart-box{ background:var(--white); border:1px solid #ded6c1; border-radius:var(--radius); padding:14px 16px; margin-bottom:14px;}
+  .chart-box canvas{ max-width:100%; }
+
+  .concurso-card{ background:var(--white); border:1px solid #ded6c1; border-radius:var(--radius); padding:14px 16px; margin-bottom:12px; }
+  .concurso-card.active{ border-color:var(--amber-deep); box-shadow:0 0 0 1px var(--amber-deep) inset; }
+  .concurso-card .cc-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:8px;}
+  .concurso-card .cc-title{ font-family:var(--font-display); font-weight:700; font-size:15px; color:var(--ink);}
+  .concurso-card .cc-sub{ font-size:12px; color:var(--ink-soft); margin-top:2px;}
+  details.schema-help{ font-size:12.5px; color:var(--ink-soft); margin-top:10px;}
+  details.schema-help summary{ cursor:pointer; color:var(--ink); font-weight:600; margin-bottom:8px;}
+  details.schema-help pre{ background:var(--paper-dim); border:1px solid #ded6c1; border-radius:var(--radius); padding:10px; overflow-x:auto; font-family:var(--font-mono); font-size:11px; line-height:1.5;}
+
+  .backup-bar{
+    margin-top:14px; padding:10px 16px; background:var(--bp-bg-deep); border:1px solid var(--bp-line);
+    border-radius:var(--radius); display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:10px; font-family:var(--font-mono); font-size:12px; color:var(--bp-line);
+  }
+  .status-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; flex-shrink:0; }
+  .btn.on-dark{ border-color:var(--bp-line); color:var(--bp-line); }
+  .btn.on-dark:hover{ background: rgba(127,207,159,0.12); }
+
+  .footer-note{ font-size:11px; color: var(--bp-line); text-align:center; margin-top:16px; font-family:var(--font-mono);}
+  .empty-state{ font-size:13px; color:var(--ink-soft); font-style:italic; padding:14px 0; }
+  ::-webkit-scrollbar{ width:10px; } ::-webkit-scrollbar-thumb{ background:var(--bp-line-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="titleblock">
+    <div class="tb-main">
+      <div class="tb-eyebrow" id="tbEyebrow">Mentor de Estudos · Projeto Aprovação</div>
+      <h1 class="tb-title" id="tbTitle">Carregando...</h1>
+      <div class="tb-sub" id="tbSub"></div>
+    </div>
+    <div class="tb-fields" id="tbFields"></div>
+  </div>
+
+  <div class="appshell">
+    <div class="sidenav" id="sideNav">
+      <div class="sidenav-nav">
+        <button data-tab="concursos"><span class="code">A-01</span><span class="label">Meus concursos</span></button>
+        <button data-tab="painel" class="active"><span class="code">A-02</span><span class="label">Painel</span></button>
+        <button data-tab="cronograma"><span class="code">A-03</span><span class="label">Cronograma</span></button>
+        <button data-tab="edital"><span class="code">A-04</span><span class="label">Edital verticalizado</span></button>
+        <button data-tab="desempenho"><span class="code">A-05</span><span class="label">Desempenho</span></button>
+        <button data-tab="redacao"><span class="code">A-06</span><span class="label">Redação</span></button>
+        <button data-tab="sobre"><span class="code">A-07</span><span class="label">Sobre o concurso</span></button>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <div class="sheet" data-sheet="concursos">
+        <h2 class="sheet-title">Meus concursos</h2>
+        <div class="sheet-desc">Troque entre concursos que você está estudando, ou adicione um novo colando o JSON gerado a partir de um edital.</div>
+        <div id="concursosContent">Carregando...</div>
+      </div>
+
+      <div class="sheet active" data-sheet="painel">
+        <h2 class="sheet-title">Painel do candidato</h2>
+        <div class="sheet-desc">Visão geral do seu progresso, o que fazer hoje e a semana inteira de uma vez.</div>
+        <div id="painelContent">Carregando...</div>
+      </div>
+
+      <div class="sheet" data-sheet="cronograma">
+        <h2 class="sheet-title">Cronograma inteligente</h2>
+        <div class="sheet-desc">Gerado automaticamente até a véspera da prova, com revisões espaçadas incluídas. Se reorganiza sozinho conforme você estuda.</div>
+        <div id="cronogramaContent">Carregando...</div>
+      </div>
+
+      <div class="sheet" data-sheet="edital">
+        <h2 class="sheet-title">Edital verticalizado</h2>
+        <div class="sheet-desc">Todo o conteúdo programático deste concurso, priorizado pelo potencial de pontuação na prova.</div>
+        <div id="editalContent">Carregando...</div>
+      </div>
+
+      <div class="sheet" data-sheet="desempenho">
+        <h2 class="sheet-title">Questões &amp; desempenho</h2>
+        <div class="sheet-desc">Registre suas sessões de questões para acompanhar o aproveitamento por disciplina e por assunto.</div>
+        <div id="desempenhoContent">Carregando...</div>
+      </div>
+
+      <div class="sheet" data-sheet="redacao">
+        <h2 class="sheet-title">Discursiva &amp; redação</h2>
+        <div class="sheet-desc" id="redacaoDesc">Registre seus treinos de redação e acompanhe a evolução.</div>
+        <div id="redacaoContent">Carregando...</div>
+      </div>
+
+      <div class="sheet" data-sheet="sobre">
+        <h2 class="sheet-title">Sobre este concurso</h2>
+        <div class="sheet-desc">Referência rápida com os dados oficiais do edital.</div>
+        <div id="sobreContent">Carregando...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="backup-bar" id="backupBar">Verificando salvamento...</div>
+
+  <div class="footer-note">MENTOR DE ESTUDOS · SEUS CONCURSOS EM UM SÓ LUGAR</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+/* =========================================================================
+   CONCURSOS PRÉ-CARREGADOS (seed)
+   ========================================================================= */
+const SEED_CONCURSOS = {
+  'sedes-df-tdas-202': {
+    meta: {
+      titulo: 'Sedes/DF — Concurso Público 2026',
+      subtitulo: 'Cargo: Técnico em Desenvolvimento e Assistência Social (TDAS) · Especialidade: Técnico Administrativo (202)',
+      orgao: 'Secretaria de Estado de Desenvolvimento Social do DF (Sedes/DF)',
+      banca: 'Instituto Quadrix',
+      requisito: 'Certificado de conclusão de ensino médio (ou médio técnico)',
+      remuneracao: 'R$ 4.320,16 + vale-alimentação R$ 640,00 · jornada de 30h semanais',
+      vagas: '398 vagas imediatas (198 AC + 80 PCD + 80 PPP + 40 HIPO) · 1.194 em cadastro de reserva · total de 1.592',
+      examDate: '2026-09-06',
+      examDateLabel: '06/09/2026 (domingo, turno da tarde)',
+      provaObjetiva: {
+        areas: [
+          { nome:'Conhecimentos Gerais', questoes:20, peso:1, pontos:20, corte:'mínimo 10,00 pts (50%)' },
+          { nome:'Conhecimentos Específicos', questoes:40, peso:2, pontos:80, corte:'mínimo 40,00 pts (50%)' }
+        ],
+        obs: 'Questões de múltipla escolha (A a E), uma resposta correta.'
+      },
+      provaDiscursiva: {
+        descricao: 'Redação dissertativo-argumentativa (20 a 30 linhas), valendo 100 pontos, sobre os conhecimentos específicos do cargo.',
+        criterios: [ {nome:'CAC', label:'Conteúdo e Atendimento ao Comando', peso:7, escalaMax:3}, {nome:'OT', label:'Organização Textual', peso:1.5, escalaMax:3}, {nome:'DLP', label:'Domínio da Modalidade Escrita', peso:1.5, escalaMax:3} ],
+        divisor: 0.3,
+        notaMinima: 50
+      },
+      datasChave: [
+        { evento:'Início do cronograma de estudos', data:'11/08/2026' },
+        { evento:'Divulgação dos locais e horários de prova', data:'01/09/2026' },
+        { evento:'Aplicação das provas objetiva e discursiva (TDAS, turno da tarde)', data:'06/09/2026' },
+        { evento:'Divulgação do gabarito preliminar', data:'09/09/2026' },
+        { evento:'Prazo para recursos contra o gabarito', data:'10 a 16/09/2026' }
+      ],
+      observacaoExtra: 'Fique atento a editais complementares e retificações no site oficial do Instituto Quadrix — mudanças de datas ou regras só valem se publicadas em edital.'
+    },
+    edital: [
+      { id:'geral-lp', area:'geral', bloco:'Língua Portuguesa', questoesNum:10, questoesEstimadas:'≈10 questões', temas:[
+        {id:'lp1', nome:'Compreensão e interpretação de textos de gêneros variados', min:50},
+        {id:'lp2', nome:'Tipos e gêneros textuais', min:30},
+        {id:'lp3', nome:'Ortografia oficial', min:30},
+        {id:'lp4', nome:'Coesão textual: referenciação, conectores, tempos e modos verbais', min:40},
+        {id:'lp5', nome:'Morfossintaxe: classes de palavras, coordenação e subordinação, pontuação', min:60},
+        {id:'lp6', nome:'Concordância, regência, crase e colocação pronominal', min:60},
+        {id:'lp7', nome:'Reescrita de frases e parágrafos (significação e substituição de palavras)', min:30},
+      ]},
+      { id:'geral-df', area:'geral', bloco:'Realidade do DF, Mulheres, Legislação e Primeiros Socorros', questoesNum:10, questoesEstimadas:'≈10 questões', temas:[
+        {id:'df1', nome:'Realidade étnica, social, histórica, geográfica, cultural, política e econômica do DF e da RIDE', min:45},
+        {id:'df2', nome:'Plano Distrital de Política para Mulheres (PDPM)', min:25},
+        {id:'df3', nome:'Lei Orgânica do DF — Título VI (Da Ordem Social e do Meio Ambiente)', min:30},
+        {id:'df4', nome:'LC 840/2011 — Títulos I, V, VI e VII (deveres, regime disciplinar, PAD)', min:60},
+        {id:'df5', nome:'Lei Maria da Penha (Lei 11.340/2006) — mínimo de 3 questões garantidas', min:45},
+        {id:'df6', nome:'Lei Distrital nº 7.484/2024 (carreira de Desenvolvimento e Assistência Social)', min:25},
+        {id:'df7', nome:'Primeiros socorros: urgência/emergência, engasgo, sangramento, fratura, queimadura, desmaio, convulsão, intoxicação', min:30},
+      ]},
+      { id:'esp-suas', area:'especifico', bloco:'Fundamentos e Gestão do SUAS', questoesNum:7, questoesEstimadas:'≈6-8 questões · comum a todas especialidades TDAS', temas:[
+        {id:'suas1', nome:'PNAS/2004: princípios, proteção social básica e especial', min:40},
+        {id:'suas2', nome:'SUAS: seguranças socioassistenciais, matricialidade sociofamiliar e territorialização', min:40},
+        {id:'suas3', nome:'NOB/SUAS (2012): responsabilidades dos entes e cofinanciamento', min:30},
+      ]},
+      { id:'esp-prog', area:'especifico', bloco:'Programas e Benefícios Socioassistenciais do DF', questoesNum:5.5, questoesEstimadas:'≈5-6 questões', temas:[
+        {id:'prog1', nome:'Cartão Prato Cheio (Lei Distrital 7.009/2021)', min:20},
+        {id:'prog2', nome:'Programa Cartão Gás (Lei Distrital 6.938/2021)', min:20},
+        {id:'prog3', nome:'Plano DF Social (Lei Distrital 7.008/2021)', min:20},
+        {id:'prog4', nome:'Benefícios Eventuais da Assistência Social do DF (Lei Distrital 5.165/2013)', min:20},
+        {id:'prog5', nome:'SISAN / Restaurante Comunitário', min:15},
+      ]},
+      { id:'esp-constit', area:'especifico', bloco:'Noções de Direito Constitucional', questoesNum:6.5, questoesEstimadas:'≈6-7 questões', temas:[
+        {id:'dc1', nome:'CF/88: princípios fundamentais', min:35},
+        {id:'dc2', nome:'Direitos e garantias fundamentais: individuais, coletivos e sociais', min:45},
+        {id:'dc3', nome:'Organização do Estado e da Administração Pública; servidores públicos', min:45},
+      ]},
+      { id:'esp-adm', area:'especifico', bloco:'Noções de Direito Administrativo e Legislação', questoesNum:7.5, questoesEstimadas:'≈7-8 questões', temas:[
+        {id:'da1', nome:'Estado, governo e administração pública: conceitos e elementos', min:30},
+        {id:'da2', nome:'Ato administrativo: requisitos, atributos, classificação e extinção', min:45},
+        {id:'da3', nome:'Poderes da Administração Pública: hierárquico, disciplinar, regulamentar e de polícia', min:35},
+        {id:'da4', nome:'Regime Jurídico dos Servidores do DF (LC 840/2011): provimento, direitos, deveres, PAD', min:60},
+      ]},
+      { id:'esp-rotinas', area:'especifico', bloco:'Atendimento, Rotinas Administrativas e Arquivologia', questoesNum:7.5, questoesEstimadas:'≈7-8 questões', temas:[
+        {id:'ra1', nome:'Qualidade no atendimento ao público e trabalho em equipe', min:20},
+        {id:'ra2', nome:'Redação oficial e comunicações administrativas', min:45},
+        {id:'ra3', nome:'Arquivologia: protocolo, tipos e métodos de arquivamento, preservação e digitalização', min:50},
+      ]},
+      { id:'esp-materiais', area:'especifico', bloco:'Recursos Materiais, Patrimônio e Compras', questoesNum:6.5, questoesEstimadas:'≈6-7 questões', temas:[
+        {id:'rm1', nome:'Administração de materiais: classificação, gestão de estoques e armazenagem', min:35},
+        {id:'rm2', nome:'Gestão patrimonial: tombamento, controle, inventário e baixa de bens', min:30},
+        {id:'rm3', nome:'Compras no setor público — Lei Federal 14.133/2021: etapas e noções de licitação', min:25, pontoForte:true},
+      ]},
+    ],
+    settingsDefault: { hoursPerDay: 1, diasDisponiveis: [1,2,3,4,5,6], diasRevisaoFinal: 3, startDate: '2026-08-11' }
+  }
+};
+
+const REVISION_TASKS = [
+  'Revisão ativa: releia os resumos dos temas com pior aproveitamento (ver aba Desempenho).',
+  'Simulado cronometrado nas condições da prova, com correção imediata.',
+  'Treino de redação sobre um tema provável, se este concurso tiver prova discursiva.',
+  'Revisão de legislação seca: releia os textos de lei mais citados no edital.',
+  'Bateria de questões misturadas de blocos diferentes, cronometrada.',
+];
+
+/* =========================================================================
+   ESTADO / MULTI-CONCURSO
+   ========================================================================= */
+const OLD_STORAGE_KEY = 'sedes-df-tdas-202-mentor-v2'; // versão single-concurso anterior
+const STORAGE_KEY = 'mentor-estudos-multi-v1';
+
+function newConcursoRuntime(seed){
+  return {
+    meta: seed.meta,
+    edital: seed.edital,
+    settings: JSON.parse(JSON.stringify(seed.settingsDefault || { hoursPerDay:1, diasDisponiveis:[1,2,3,4,5,6], diasRevisaoFinal:3, startDate: toISO(todayMidnight()) })),
+    topicStatus: {},
+    questionsLog: [],
+    essaysLog: []
+  };
+}
+function defaultState(){
+  const concursos = {};
+  Object.keys(SEED_CONCURSOS).forEach(id=>{ concursos[id] = newConcursoRuntime(SEED_CONCURSOS[id]); });
+  return { activeConcursoId: Object.keys(SEED_CONCURSOS)[0], concursos };
+}
+let state = defaultState();
+function getActiveConcurso(){ return state.concursos[state.activeConcursoId]; }
+
+function computeTemaIndex(edital){
+  const idx = {};
+  edital.forEach(b => b.temas.forEach(t => { idx[t.id] = {...t, blocoId:b.id, blocoNome:b.bloco, area:b.area}; }));
+  return idx;
+}
+function computeTotalTemas(edital){ return edital.reduce((a,b)=>a+b.temas.length,0); }
+function computeEditalPriority(edital){
+  return edital.map(b => ({...b, priority: (b.questoesNum||1) * (b.area==='geral'?1:2)})).sort((a,b)=>b.priority-a.priority);
+}
+
+function slugify(s){
+  return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,40) || 'concurso';
+}
+function importConcursoDefinition(raw){
+  let parsed;
+  try{ parsed = JSON.parse(raw); }
+  catch(e){ alert('JSON inválido — confira se copiou o conteúdo completo, do { inicial ao } final.'); return false; }
+  if(!parsed || !parsed.meta || !parsed.meta.titulo || !parsed.meta.examDate || !Array.isArray(parsed.edital) || !parsed.edital.length){
+    alert('Esse conteúdo não tem o formato esperado. É preciso ter meta.titulo, meta.examDate e um edital[] com pelo menos um bloco.');
+    return false;
+  }
+  const id = slugify(parsed.meta.titulo) + '-' + Date.now().toString(36).slice(-4);
+  state.concursos[id] = {
+    meta: parsed.meta,
+    edital: parsed.edital,
+    settings: Object.assign({ hoursPerDay:1, diasDisponiveis:[1,2,3,4,5,6], diasRevisaoFinal:3, startDate: toISO(todayMidnight()) }, parsed.settingsDefault || {}),
+    topicStatus: {},
+    questionsLog: [],
+    essaysLog: []
+  };
+  state.activeConcursoId = id;
+  invalidateSchedule();
+  saveState();
+  renderAll();
+  switchTab('painel');
+  return true;
+}
+function switchConcurso(id){
+  if(!state.concursos[id]) return;
+  state.activeConcursoId = id;
+  invalidateSchedule();
+  saveState();
+  renderAll();
+}
+function deleteConcurso(id){
+  const ids = Object.keys(state.concursos);
+  if(ids.length<=1){ alert('Esse é o único concurso salvo — não é possível excluir o último.'); return; }
+  const nome = state.concursos[id] && state.concursos[id].meta ? state.concursos[id].meta.titulo : id;
+  if(!confirm('Excluir "' + nome + '" e todo o progresso registrado nele? Essa ação não pode ser desfeita.')) return;
+  delete state.concursos[id];
+  if(state.activeConcursoId === id) state.activeConcursoId = Object.keys(state.concursos)[0];
+  invalidateSchedule();
+  saveState();
+  renderAll();
+}
+
+function applyLoadedState(parsed){
+  if(parsed && parsed.concursos && parsed.activeConcursoId){
+    state = parsed;
+    Object.keys(state.concursos).forEach(id=>{
+      const c = state.concursos[id];
+      if(!c.topicStatus) c.topicStatus = {};
+      if(!c.questionsLog) c.questionsLog = [];
+      if(!c.essaysLog) c.essaysLog = [];
+      if(!c.settings) c.settings = { hoursPerDay:1, diasDisponiveis:[1,2,3,4,5,6], diasRevisaoFinal:3, startDate: toISO(todayMidnight()) };
+    });
+    if(!state.concursos[state.activeConcursoId]) state.activeConcursoId = Object.keys(state.concursos)[0];
+  } else if(parsed && parsed.topicStatus){
+    // formato antigo (single-concurso, versões anteriores deste app)
+    const fresh = defaultState();
+    const target = fresh.concursos['sedes-df-tdas-202'];
+    target.settings = Object.assign(target.settings, parsed.settings || {});
+    target.topicStatus = parsed.topicStatus || {};
+    target.questionsLog = parsed.questionsLog || [];
+    target.essaysLog = parsed.essaysLog || [];
+    state = fresh;
+  }
+}
+
+/* ---- armazenamento com fallback duplo -------------------------------
+   1) window.storage  -> disponível quando o app roda dentro do Claude.ai
+   2) localStorage     -> disponível quando o arquivo é aberto direto no
+                           navegador (baixado / aberto localmente)
+   3) nenhum dos dois   -> o app ainda funciona na sessão atual e avisa o
+                           usuário para usar o backup manual (.json)
+------------------------------------------------------------------------ */
+let STORAGE_MODE = 'none'; // 'cloud' | 'local' | 'none'
+let lastSavedAt = null;
+
+async function detectStorageMode(){
+  const testKey = STORAGE_KEY + '__healthcheck';
+  const testVal = 'ok-' + Date.now();
+  try{
+    if(window.storage && window.storage.set && window.storage.get){
+      await window.storage.set(testKey, testVal);
+      const res = await window.storage.get(testKey);
+      if(res && res.value === testVal){ STORAGE_MODE = 'cloud'; return; }
+    }
+  }catch(e){ /* segue para o próximo método */ }
+  try{
+    localStorage.setItem(testKey, testVal);
+    const back = localStorage.getItem(testKey);
+    localStorage.removeItem(testKey);
+    if(back === testVal){ STORAGE_MODE = 'local'; return; }
+  }catch(e){ /* segue para "none" */ }
+  STORAGE_MODE = 'none';
+}
+
+async function loadState(){
+  await detectStorageMode();
+  try{
+    let raw = null;
+    if(STORAGE_MODE === 'cloud'){
+      const res = await window.storage.get(STORAGE_KEY);
+      raw = res ? res.value : null;
+    } else if(STORAGE_MODE === 'local'){
+      raw = localStorage.getItem(STORAGE_KEY);
+    }
+    if(raw){ applyLoadedState(JSON.parse(raw)); return; }
+  }catch(e){ console.error('Falha ao carregar', e); }
+
+  // nada no formato novo: tenta migrar dados da versão anterior (single-concurso)
+  try{
+    const oldRaw = localStorage.getItem(OLD_STORAGE_KEY);
+    if(oldRaw){
+      applyLoadedState(JSON.parse(oldRaw));
+      await saveState();
+      return;
+    }
+  }catch(e){ /* sem dados antigos tambem */ }
+
+  state = defaultState();
+}
+
+async function saveState(){
+  const payload = JSON.stringify(state);
+  try{
+    if(STORAGE_MODE === 'cloud'){
+      await window.storage.set(STORAGE_KEY, payload);
+      lastSavedAt = new Date();
+    } else if(STORAGE_MODE === 'local'){
+      localStorage.setItem(STORAGE_KEY, payload);
+      lastSavedAt = new Date();
+    }
+  }catch(e){
+    console.error('Falha ao salvar', e);
+  }
+  renderBackupBar();
+}
+
+/* ---- backup manual (.json) — funciona sempre, independente do navegador ---- */
+function exportBackup(){
+  const payload = JSON.stringify(state, null, 2);
+  const blob = new Blob([payload], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mentor-estudos-backup-' + toISO(todayMidnight()) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function importBackupFile(inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    let parsed;
+    try{
+      parsed = JSON.parse(ev.target.result);
+    }catch(err){
+      alert('Não foi possível ler esse arquivo. Confira se é um backup .json exportado por este mentor.');
+      inputEl.value = '';
+      return;
+    }
+    const pareceValido = parsed && (('concursos' in parsed && 'activeConcursoId' in parsed) || 'topicStatus' in parsed);
+    if(!pareceValido){
+      alert('Este arquivo não parece ser um backup válido deste mentor de estudos.');
+      inputEl.value = '';
+      return;
+    }
+    if(!confirm('Isso vai substituir todo o progresso atual (todos os concursos) pelo conteúdo desse backup. Deseja continuar?')){
+      inputEl.value = '';
+      return;
+    }
+    applyLoadedState(parsed);
+    invalidateSchedule();
+    await saveState();
+    renderAll();
+    alert('Backup restaurado com sucesso.');
+    inputEl.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function renderBackupBar(){
+  const el = document.getElementById('backupBar');
+  if(!el) return;
+  const info = STORAGE_MODE === 'cloud'
+    ? { dot:'#7fcf9f', text:'Progresso salvo automaticamente neste artefato do Claude.' }
+    : STORAGE_MODE === 'local'
+    ? { dot:'#7fcf9f', text:'Progresso salvo automaticamente neste navegador. Trocando de navegador/dispositivo, use o backup abaixo.' }
+    : { dot:'#e08a6e', text:'Não foi possível salvar automaticamente neste ambiente. Baixe um backup (.json) ao final de cada sessão para não perder o progresso.' };
+  const savedTxt = lastSavedAt ? ('último salvamento ' + lastSavedAt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})) : 'ainda sem alterações salvas nesta sessão';
+  el.innerHTML = `
+    <div style="display:flex; align-items:center;">
+      <span class="status-dot" style="background:${info.dot};"></span>
+      <span>${info.text} <span style="opacity:.65;">(${savedTxt})</span></span>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn small secondary on-dark" onclick="exportBackup()">⬇ Baixar backup</button>
+      <button class="btn small secondary on-dark" onclick="document.getElementById('restoreFileInput').click()">⬆ Restaurar backup</button>
+      <input type="file" id="restoreFileInput" accept="application/json" style="display:none" onchange="importBackupFile(this)">
+    </div>
+  `;
+}
+
+/* =========================================================================
+   UTILITÁRIOS DE DATA (local, sem UTC shift)
+   ========================================================================= */
+function todayMidnight(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+function addDays(date,n){ const d = new Date(date); d.setDate(d.getDate()+n); return d; }
+function toISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fromISO(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
+function fmtDate(d){ return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}); }
+function fmtDateFull(d){ return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'}); }
+function fmtWeekday(d){ return d.toLocaleDateString('pt-BR', {weekday:'long'}); }
+function fmtWeekdayShort(d){ return d.toLocaleDateString('pt-BR', {weekday:'short'}).replace('.',''); }
+function isSameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+function getWeekStart(date){ const d=new Date(date); const day=d.getDay(); const diff=(day===0?-6:1-day); d.setDate(d.getDate()+diff); d.setHours(0,0,0,0); return d; }
+function diffDays(a,b){ return Math.round((b-a)/86400000); }
+
+/* =========================================================================
+   GERADOR DE CRONOGRAMA (prioridade + revisão espaçada) — por concurso ativo
+   ========================================================================= */
+function buildQueue(editalPriority, topicStatus){
+  const pointers = editalPriority.map(()=>0);
+  const queue = [];
+  let remaining = true;
+  while(remaining){
+    remaining = false;
+    for(let i=0;i<editalPriority.length;i++){
+      const bloco = editalPriority[i];
+      while(pointers[i] < bloco.temas.length){
+        const tema = bloco.temas[pointers[i]];
+        pointers[i]++;
+        const st = topicStatus[tema.id];
+        if(st && st.estudado) continue;
+        queue.push({...tema, blocoId:bloco.id, blocoNome:bloco.bloco, area:bloco.area});
+        remaining = true;
+        break;
+      }
+    }
+  }
+  return queue;
+}
+
+function generateSchedule(){
+  const concurso = getActiveConcurso();
+  const examDate = fromISO(concurso.meta.examDate);
+  const editalPriority = computeEditalPriority(concurso.edital);
+  const temaIndex = computeTemaIndex(concurso.edital);
+  const today = todayMidnight();
+  const settings = concurso.settings;
+  const topicStatus = concurso.topicStatus;
+  const start = fromISO(settings.startDate);
+  const effectiveStart = start > today ? start : today;
+
+  const days = [];
+  let cursor = new Date(effectiveStart);
+  while(cursor < examDate){
+    if(settings.diasDisponiveis.includes(cursor.getDay())) days.push(new Date(cursor));
+    cursor = addDays(cursor,1);
+  }
+  if(days.length === 0) return { schedule: [], examPassed: today >= examDate, totalDays:0, effectiveStart, examDate };
+
+  const reservedCount = Math.min(settings.diasRevisaoFinal, Math.max(1, Math.floor(days.length*0.35)));
+  let contentDaysDates = days.slice(0, Math.max(0, days.length - reservedCount));
+  let finalDates = days.slice(Math.max(0, days.length - reservedCount));
+
+  let queue = buildQueue(editalPriority, topicStatus);
+  const dayBudget = settings.hoursPerDay*60;
+  const tolerance = dayBudget*1.35 + 12;
+  const dayEntries = [];
+
+  for(const day of contentDaysDates){
+    if(queue.length === 0){ finalDates = [day, ...finalDates]; continue; }
+    let used = 0; const novos = []; let idx = 0;
+    while(idx < queue.length && novos.length < 6){
+      const item = queue[idx];
+      if(novos.length===0 || used+item.min <= tolerance){
+        novos.push(item); used += item.min; queue.splice(idx,1);
+        if(used >= dayBudget) break;
+      } else idx++;
+    }
+    dayEntries.push({ date: day, novos, minutos: used, tarefaFinal:null, revisoesEspacadas:[], questoesSugestao: novos.length>0 });
+  }
+  if(queue.length && dayEntries.length){ dayEntries[dayEntries.length-1].novos.push(...queue); queue = []; }
+
+  finalDates.sort((a,b)=>a-b);
+  finalDates.forEach((day,i)=>{
+    dayEntries.push({ date: day, novos: [], minutos:0, tarefaFinal: REVISION_TASKS[i % REVISION_TASKS.length], revisoesEspacadas:[], questoesSugestao:false });
+  });
+  dayEntries.sort((a,b)=>a.date-b.date);
+
+  Object.keys(topicStatus).forEach(temaId=>{
+    const st = topicStatus[temaId];
+    if(!st || !st.estudado || !st.estudadoDate) return;
+    const info = temaIndex[temaId];
+    if(!info) return;
+    const studiedDate = fromISO(st.estudadoDate);
+    const reviews = [
+      { idx:1, due: addDays(studiedDate,2), done: !!st.rev1Done },
+      { idx:2, due: addDays(studiedDate,6), done: !!st.rev2Done },
+    ];
+    reviews.forEach(r=>{
+      if(r.done) return;
+      if(r.due >= examDate) return;
+      const target = r.due > effectiveStart ? r.due : effectiveStart;
+      let slot = dayEntries.find(e => e.date >= target);
+      if(!slot) slot = dayEntries[dayEntries.length-1];
+      if(slot){
+        slot.revisoesEspacadas.push({ temaId, revIndex:r.idx, nome:info.nome, blocoNome:info.blocoNome, area:info.area });
+      }
+    });
+  });
+
+  return { schedule: dayEntries, examPassed:false, totalDays: days.length, contentDaysCount: contentDaysDates.length, reservedCount, effectiveStart, examDate };
+}
+
+let SCHEDULE_CACHE = null;
+function getSchedule(){ if(!SCHEDULE_CACHE) SCHEDULE_CACHE = generateSchedule(); return SCHEDULE_CACHE; }
+function invalidateSchedule(){ SCHEDULE_CACHE = null; }
+
+/* =========================================================================
+   HELPERS DE PROGRESSO — todos leem o concurso ativo
+   ========================================================================= */
+function countEstudados(){ const c=getActiveConcurso(); return Object.values(c.topicStatus).filter(s=>s && s.estudado).length; }
+function pctEstudado(){ const c=getActiveConcurso(); const total=computeTotalTemas(c.edital); return total ? Math.round((countEstudados()/total)*100) : 0; }
+function pctEstudadoArea(area){
+  const c = getActiveConcurso();
+  const temas = Object.values(computeTemaIndex(c.edital)).filter(t=>t.area===area);
+  const done = temas.filter(t=>{ const s=c.topicStatus[t.id]; return s && s.estudado; }).length;
+  return temas.length ? Math.round((done/temas.length)*100) : 0;
+}
+function questionStatsByBloco(){
+  const c = getActiveConcurso();
+  const map = {};
+  c.edital.forEach(b=>{ map[b.id] = {blocoNome:b.bloco, area:b.area, total:0, acertos:0}; });
+  c.questionsLog.forEach(q=>{
+    if(!map[q.blocoId]) return;
+    map[q.blocoId].total += Number(q.total)||0;
+    map[q.blocoId].acertos += Number(q.acertos)||0;
+  });
+  return map;
+}
+function questionStatsByTema(){
+  const c = getActiveConcurso();
+  const temaIndex = computeTemaIndex(c.edital);
+  const map = {};
+  c.questionsLog.forEach(q=>{
+    if(!q.temaId || !temaIndex[q.temaId]) return;
+    if(!map[q.temaId]) map[q.temaId] = { nome: temaIndex[q.temaId].nome, blocoNome: temaIndex[q.temaId].blocoNome, total:0, acertos:0 };
+    map[q.temaId].total += Number(q.total)||0;
+    map[q.temaId].acertos += Number(q.acertos)||0;
+  });
+  return map;
+}
+function overallQuestionStats(){
+  const c = getActiveConcurso();
+  let total=0, acertos=0;
+  c.questionsLog.forEach(q=>{ total += Number(q.total)||0; acertos += Number(q.acertos)||0; });
+  return { total, acertos, pct: total ? Math.round((acertos/total)*100) : null };
+}
+function perfClass(pct){ return pct<50 ? 'red' : (pct<70 ? '' : 'green'); }
+function perfHex(pct){ return pct<50 ? '#c9553f' : (pct<70 ? '#c98420' : '#3f8a5f'); }
+
+function toggleTopicEstudado(id){
+  const c = getActiveConcurso();
+  const cur = c.topicStatus[id] || {};
+  if(cur.estudado){
+    c.topicStatus[id] = {};
+  } else {
+    c.topicStatus[id] = { estudado:true, estudadoDate: toISO(todayMidnight()), rev1Done:false, rev2Done:false };
+  }
+  invalidateSchedule(); saveState(); renderAll();
+}
+function toggleReview(id, idx){
+  const c = getActiveConcurso();
+  const cur = c.topicStatus[id] || {};
+  if(idx===1) cur.rev1Done = !cur.rev1Done; else cur.rev2Done = !cur.rev2Done;
+  c.topicStatus[id] = cur;
+  invalidateSchedule(); saveState(); renderAll();
+}
+
+/* =========================================================================
+   RENDER: TITLE BLOCK
+   ========================================================================= */
+function renderTitleBlock(){
+  const c = getActiveConcurso();
+  const examDate = fromISO(c.meta.examDate);
+  const today = todayMidnight();
+  const passed = today >= examDate;
+  const dias = Math.max(0, diffDays(today, examDate));
+
+  document.getElementById('tbTitle').textContent = c.meta.titulo || 'Concurso';
+  document.getElementById('tbSub').textContent = c.meta.subtitulo || '';
+  const totalConcursos = Object.keys(state.concursos).length;
+  document.getElementById('tbEyebrow').innerHTML = 'Mentor de Estudos · Projeto Aprovação' +
+    (totalConcursos>1 ? ` · <span class="switch-link" onclick="switchTab('concursos')">trocar concurso (${totalConcursos})</span>` : ` · <span class="switch-link" onclick="switchTab('concursos')">+ novo concurso</span>`);
+
+  const el = document.getElementById('tbFields');
+  el.innerHTML = `
+    <div class="tb-field">
+      <div class="tb-field-label">Prazo</div>
+      <div class="tb-field-value big">${passed ? '—' : dias}</div>
+      <div class="stat-sub" style="color:var(--bp-line)">${passed ? 'prova já ocorreu' : (dias===1?'dia até a prova':'dias até a prova')}</div>
+    </div>
+    <div class="tb-field">
+      <div class="tb-field-label">Data da prova</div>
+      <div class="tb-field-value" style="font-size:14px;">${c.meta.examDateLabel || c.meta.examDate}</div>
+    </div>
+    <div class="tb-field">
+      <div class="tb-field-label">Banca</div>
+      <div class="tb-field-value" style="font-size:14px;">${c.meta.banca || '—'}</div>
+    </div>
+    <div class="tb-field">
+      <div class="tb-field-label">Escala (ritmo)</div>
+      <div class="tb-field-value" style="font-size:14px;">${c.settings.hoursPerDay}h / dia</div>
+    </div>
+  `;
+}
+
+/* =========================================================================
+   RENDER: CONCURSOS (gerenciador)
+   ========================================================================= */
+function renderConcursos(){
+  const el = document.getElementById('concursosContent');
+  const cards = Object.keys(state.concursos).map(id=>{
+    const c = state.concursos[id];
+    const isActive = id === state.activeConcursoId;
+    const total = computeTotalTemas(c.edital);
+    const done = Object.values(c.topicStatus).filter(s=>s&&s.estudado).length;
+    const pct = total ? Math.round((done/total)*100) : 0;
+    const examDate = c.meta.examDate ? fromISO(c.meta.examDate) : null;
+    const diasTxt = examDate ? Math.max(0, diffDays(todayMidnight(), examDate)) + ' dias até a prova' : '';
+    return `
+      <div class="concurso-card ${isActive?'active':''}">
+        <div class="cc-head">
+          <div>
+            <div class="cc-title">${c.meta.titulo || id} ${isActive?'<span class="badge ativo" style="margin-left:6px;">ativo</span>':''}</div>
+            <div class="cc-sub">${c.meta.subtitulo || ''}</div>
+            <div class="cc-sub">${diasTxt} · ${c.meta.banca || ''}</div>
+          </div>
+          <div style="min-width:130px;">
+            <div class="ruler"><div class="ruler-fill" style="width:${pct}%"></div></div>
+            <div class="ruler-label"><span>${done}/${total}</span><span>${pct}%</span></div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          ${isActive ? '' : `<button class="btn small" onclick="switchConcurso('${id}')">Usar este concurso</button>`}
+          <button class="btn small danger" onclick="deleteConcurso('${id}')">Excluir</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  el.innerHTML = `
+    <section class="block">
+      <h3 class="block-title"><span class="num">1</span> Concursos salvos</h3>
+      ${cards}
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">2</span> Adicionar novo concurso</h3>
+      <div class="card">
+        <div style="font-size:13px; line-height:1.6; margin-bottom:12px;">
+          Envie o edital (PDF ou texto) para o Claude no chat e peça para gerar o plano no formato deste app.
+          Cole o JSON que ele devolver aqui embaixo e clique em Adicionar. Seu progresso nos outros concursos não é afetado.
+        </div>
+        <textarea class="mono" id="novoConcursoJSON" placeholder='{"meta": {"titulo": "...", "examDate": "AAAA-MM-DD", ...}, "edital": [...]}'></textarea>
+        <div style="margin-top:10px;">
+          <button class="btn" onclick="handleImportConcurso()">Adicionar concurso</button>
+        </div>
+        <details class="schema-help">
+          <summary>Ver formato esperado do JSON</summary>
+          <pre>{
+  "meta": {
+    "titulo": "Nome do concurso",
+    "subtitulo": "Cargo / especialidade",
+    "orgao": "Órgão responsável",
+    "banca": "Banca organizadora",
+    "requisito": "Escolaridade exigida",
+    "remuneracao": "Valor e jornada",
+    "vagas": "Descrição das vagas",
+    "examDate": "2026-11-15",
+    "examDateLabel": "15/11/2026 (domingo)",
+    "provaObjetiva": { "areas": [ {"nome":"...", "questoes":20, "peso":1, "pontos":20, "corte":"..."} ] },
+    "provaDiscursiva": {
+      "descricao": "...", "notaMinima": 50, "divisor": 0.3,
+      "criterios": [ {"nome":"CAC","label":"...","peso":7,"escalaMax":3} ]
+    },
+    "datasChave": [ {"evento":"...", "data":"dd/mm/aaaa"} ]
+  },
+  "edital": [
+    { "id":"bloco-1", "area":"geral", "bloco":"Nome do bloco", "questoesNum":10,
+      "questoesEstimadas":"≈10 questões",
+      "temas":[ {"id":"t1","nome":"Nome do tema","min":45} ] }
+  ],
+  "settingsDefault": { "hoursPerDay":1, "diasDisponiveis":[1,2,3,4,5,6], "diasRevisaoFinal":3, "startDate":"2026-08-11" }
+}</pre>
+          <div style="margin-top:8px;">"provaDiscursiva" e "settingsDefault" são opcionais. "area" de cada bloco deve ser "geral" ou "especifico".</div>
+        </details>
+      </div>
+    </section>
+  `;
+}
+function handleImportConcurso(){
+  const raw = document.getElementById('novoConcursoJSON').value.trim();
+  if(!raw){ alert('Cole o JSON do novo concurso antes de continuar.'); return; }
+  const ok = importConcursoDefinition(raw);
+  if(ok) alert('Concurso adicionado! Você já pode ver o cronograma e o edital dele.');
+}
+
+/* =========================================================================
+   RENDER: PAINEL
+   ========================================================================= */
+function renderPainel(){
+  const c = getActiveConcurso();
+  const today = todayMidnight();
+  const { schedule, examPassed, totalDays } = getSchedule();
+  const el = document.getElementById('painelContent');
+
+  if(examPassed){
+    el.innerHTML = `<div class="callout red"><b>A data da prova (${c.meta.examDateLabel || c.meta.examDate}) já passou.</b> Use as abas Edital e Desempenho para revisar seu histórico de estudo. Boa sorte no resultado!</div>`;
+    return;
+  }
+
+  const todayEntry = schedule.find(d => isSameDay(d.date, today));
+  const restStats = overallQuestionStats();
+  const studyHoursLeft = ((totalDays - Math.min(totalDays, c.settings.diasRevisaoFinal)) * c.settings.hoursPerDay).toFixed(1);
+  const editalPriority = computeEditalPriority(c.edital);
+  const top3 = editalPriority.slice(0,3).map(b=>b.bloco).join(', ');
+  const totalTemas = computeTotalTemas(c.edital);
+
+  let todayHtml = '';
+  if(todayEntry && (todayEntry.novos.length || todayEntry.revisoesEspacadas.length)){
+    todayHtml = todayEntry.novos.map(t=>`
+      <div class="today-item">
+        <span class="tag">${t.area==='geral'?'GERAL':'ESPECÍFICO'}</span>
+        <div class="tx">${t.nome}<small>${t.blocoNome} · ~${t.min} min</small></div>
+      </div>`).join('') +
+      todayEntry.revisoesEspacadas.map(r=>`
+      <div class="today-item">
+        <span class="tag rev">REVISÃO ${r.revIndex}ª</span>
+        <div class="tx">${r.nome}<small>${r.blocoNome} · reforço espaçado</small></div>
+      </div>`).join('') +
+      (todayEntry.questoesSugestao ? `<div class="today-item"><span class="tag" style="background:var(--bp-line); color:var(--bp-bg-deep);">QUESTÕES</span><div class="tx">Resolva ~10 questões dos temas já estudados e registre em Desempenho.<small>reforça retenção do que você acabou de ver</small></div></div>` : '');
+  } else if(todayEntry && todayEntry.tarefaFinal){
+    todayHtml = `<div class="today-item"><span class="tag">REVISÃO FINAL</span><div class="tx">${todayEntry.tarefaFinal}</div></div>`;
+  } else {
+    todayHtml = `<div class="empty-state" style="color:var(--bp-line);">Sem estudo agendado para hoje. Aproveite para revisar o caderno de erros.</div>`;
+  }
+
+  const weekStart = getWeekStart(today);
+  const weekEnd = addDays(weekStart,6);
+  const weekEntries = schedule.filter(d => d.date >= weekStart && d.date <= weekEnd);
+  const weekTemasTotal = weekEntries.reduce((a,d)=>a + d.novos.length, 0);
+  const weekTemasDone = weekEntries.reduce((a,d)=> a + d.novos.filter(t=>{const s=c.topicStatus[t.id]; return s&&s.estudado;}).length, 0);
+
+  el.innerHTML = `
+    <div class="today-card">
+      <div class="lbl">Hoje · ${fmtDateFull(today)}</div>
+      ${todayHtml}
+    </div>
+
+    <div class="callout info">
+      <b>Diagnóstico de tempo:</b> no seu ritmo atual (${c.settings.hoursPerDay}h/dia), restam cerca de <b>${studyHoursLeft}h</b> de estudo até a reta final.
+      O cronograma prioriza pelo potencial de pontuação na prova — agora no topo: <b>${top3}</b>.
+      Se conseguir abrir mais tempo por dia, ajuste isso na aba Cronograma: o plano se recalcula sozinho.
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:22px;">
+      <div class="card">
+        <div class="stat-label">Edital estudado</div>
+        <div class="stat-value amber">${pctEstudado()}%</div>
+        <div class="stat-sub">${countEstudados()} de ${totalTemas} temas</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">Revisões em dia</div>
+        <div class="stat-value">${Object.values(c.topicStatus).filter(s=>s&&s.rev1Done).length + Object.values(c.topicStatus).filter(s=>s&&s.rev2Done).length}</div>
+        <div class="stat-sub">revisões espaçadas concluídas</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">Questões respondidas</div>
+        <div class="stat-value">${restStats.total}</div>
+        <div class="stat-sub">total registrado</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">Aproveitamento geral</div>
+        <div class="stat-value ${restStats.pct!==null && restStats.pct>=60 ? 'green':''}">${restStats.pct===null?'—':restStats.pct+'%'}</div>
+        <div class="stat-sub">${restStats.acertos} acertos registrados</div>
+      </div>
+    </div>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">A</span> Semana em cronograma (${fmtDate(weekStart)} a ${fmtDate(weekEnd)})</h3>
+      <div class="ruler" style="margin-bottom:14px;"><div class="ruler-fill" style="width:${weekTemasTotal? Math.round(weekTemasDone/weekTemasTotal*100):0}%"></div></div>
+      <div class="week-grid">
+        ${renderWeekGrid(weekStart, today, schedule)}
+      </div>
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">B</span> Progresso por área</h3>
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="stat-label">Conhecimentos Gerais</div>
+          <div class="ruler" style="margin-top:8px;"><div class="ruler-fill" style="width:${pctEstudadoArea('geral')}%"></div></div>
+          <div class="ruler-label"><span>${pctEstudadoArea('geral')}% estudado</span></div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Conhecimentos Específicos</div>
+          <div class="ruler" style="margin-top:8px;"><div class="ruler-fill green" style="width:${pctEstudadoArea('especifico')}%"></div></div>
+          <div class="ruler-label"><span>${pctEstudadoArea('especifico')}% estudado</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">C</span> Atalhos</h3>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn" onclick="switchTab('desempenho')">Registrar questões</button>
+        <button class="btn secondary" onclick="switchTab('redacao')">Registrar redação</button>
+        <button class="btn secondary" onclick="switchTab('cronograma')">Ver cronograma completo</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderWeekGrid(weekStart, today, schedule){
+  const cards = [];
+  for(let i=0;i<7;i++){
+    const d = addDays(weekStart, i);
+    const entry = schedule.find(e => isSameDay(e.date, d));
+    const isToday = isSameDay(d, today);
+    let inner = '';
+    if(!entry){
+      inner = `<div class="wg-empty">${d < today ? 'já passou' : 'dia livre'}</div>`;
+    } else if(entry.tarefaFinal){
+      inner = `<div class="wg-pill rev">Revisão final</div><div class="wg-item">${entry.tarefaFinal}</div>`;
+    } else if(entry.novos.length===0 && entry.revisoesEspacadas.length===0){
+      inner = `<div class="wg-empty">dia livre</div>`;
+    } else {
+      const counts = `
+        ${entry.novos.length ? `<span class="wg-pill study">${entry.novos.length} estudo</span>`:''}
+        ${entry.revisoesEspacadas.length ? `<span class="wg-pill rev">${entry.revisoesEspacadas.length} revisão</span>`:''}
+        ${entry.questoesSugestao ? `<span class="wg-pill spec">questões</span>`:''}
+      `;
+      const items = entry.novos.slice(0,2).map(t=>`<div class="wg-item">📘 ${t.nome.length>38?t.nome.slice(0,38)+'…':t.nome}</div>`).join('') +
+        (entry.novos.length>2 ? `<div class="wg-item">+${entry.novos.length-2} tema(s)</div>` : '') +
+        entry.revisoesEspacadas.slice(0,1).map(r=>`<div class="wg-item">🔁 ${r.nome.length>34?r.nome.slice(0,34)+'…':r.nome}</div>`).join('');
+      inner = counts + items;
+    }
+    cards.push(`
+      <div class="wg-card ${isToday?'today':''}">
+        <div class="wg-head"><span>${fmtDate(d)}</span><span class="dn">${fmtWeekdayShort(d)}</span></div>
+        ${inner}
+      </div>
+    `);
+  }
+  return cards.join('');
+}
+
+/* =========================================================================
+   RENDER: CRONOGRAMA
+   ========================================================================= */
+function renderCronograma(){
+  const c = getActiveConcurso();
+  const el = document.getElementById('cronogramaContent');
+  const s = c.settings;
+  const { schedule, examPassed, totalDays, contentDaysCount, reservedCount } = getSchedule();
+
+  const dowLabels = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const dowPicker = [0,1,2,3,4,5,6].map(d=>`
+    <label><input type="checkbox" data-dow="${d}" ${s.diasDisponiveis.includes(d)?'checked':''}/> ${dowLabels[d]}</label>
+  `).join('');
+
+  let settingsHtml = `
+    <div class="settings-box">
+      <div class="grid grid-3">
+        <div>
+          <label class="f-label">Data de início do cronograma</label>
+          <input type="date" id="inpInicio" value="${s.startDate}">
+        </div>
+        <div>
+          <label class="f-label">Horas de estudo por dia</label>
+          <input type="number" id="inpHoras" min="0.25" max="12" step="0.25" value="${s.hoursPerDay}">
+        </div>
+        <div>
+          <label class="f-label">Dias reservados p/ revisão final</label>
+          <input type="number" id="inpRevisao" min="0" max="10" step="1" value="${s.diasRevisaoFinal}">
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="f-label">Dias disponíveis na semana</label>
+        <div class="dow-picker">${dowPicker}</div>
+      </div>
+      <div style="margin-top:12px;">
+        <button class="btn" onclick="saveSettingsAndRegenerate()">Salvar e recalcular cronograma</button>
+      </div>
+    </div>
+  `;
+
+  if(examPassed){
+    el.innerHTML = settingsHtml + `<div class="callout red">A prova (${c.meta.examDateLabel || c.meta.examDate}) já passou — não há mais cronograma a gerar.</div>`;
+    return;
+  }
+  if(totalDays===0){
+    el.innerHTML = settingsHtml + `<div class="callout red">Nenhum dia disponível foi selecionado. Marque ao menos um dia da semana acima.</div>`;
+    return;
+  }
+
+  const summary = `
+    <div class="callout info">
+      Restam <b>${totalDays}</b> dias de estudo disponíveis a partir de ${fmtDate(getSchedule().effectiveStart)}: <b>${contentDaysCount}</b> para conteúdo novo e
+      <b>${reservedCount}</b> reservados para revisão geral e simulados na reta final. As revisões espaçadas (🔁, +2 e +6 dias após cada tema) aparecem automaticamente nos dias seguintes.
+    </div>
+  `;
+
+  const weeks = {};
+  schedule.forEach(entry=>{
+    const ws = getWeekStart(entry.date).getTime();
+    if(!weeks[ws]) weeks[ws] = [];
+    weeks[ws].push(entry);
+  });
+  const today = todayMidnight();
+
+  const weeksHtml = Object.keys(weeks).sort((a,b)=>a-b).map(ws=>{
+    const wsDate = new Date(Number(ws));
+    const weDate = addDays(wsDate,6);
+    const days = weeks[ws];
+    const daysHtml = days.map(d=>{
+      const isToday = isSameDay(d.date, today);
+      let inner;
+      if(d.tarefaFinal){
+        inner = `<div class="chk-row"><div class="txt">${d.tarefaFinal}</div></div>`;
+      } else if(d.novos.length===0 && d.revisoesEspacadas.length===0){
+        inner = `<div class="empty-state">Dia livre.</div>`;
+      } else {
+        let novosHtml = '';
+        if(d.novos.length){
+          novosHtml = `<div class="day-subhead">Conteúdo novo</div>` + d.novos.map(t=>{
+            const st = c.topicStatus[t.id] || {};
+            return `<div class="chk-row">
+              <input type="checkbox" ${st.estudado?'checked':''} onchange="toggleTopicEstudado('${t.id}')">
+              <div class="txt">
+                <span class="${st.estudado?'done':''}">${t.nome}</span>
+                <div class="meta">${t.blocoNome} · ~${t.min} min</div>
+              </div>
+              <div class="badges"><span class="badge ${t.area}">${t.area==='geral'?'Geral':'Específico'}</span></div>
+            </div>`;
+          }).join('');
+        }
+        let revHtml = '';
+        if(d.revisoesEspacadas.length){
+          revHtml = `<div class="day-subhead">Revisão espaçada</div>` + d.revisoesEspacadas.map(r=>`
+            <div class="chk-row">
+              <input type="checkbox" onchange="toggleReview('${r.temaId}',${r.revIndex})">
+              <div class="txt">
+                <span>${r.nome}</span>
+                <div class="meta">${r.blocoNome} · ${r.revIndex}ª revisão</div>
+              </div>
+              <div class="badges"><span class="badge revisado">Revisão ${r.revIndex}</span></div>
+            </div>`).join('');
+        }
+        const qHtml = d.questoesSugestao ? `<div class="q-reminder">📝 Reserve ~10 min para resolver questões dos temas já vistos e registre em Desempenho.</div>` : '';
+        inner = novosHtml + revHtml + qHtml;
+      }
+      return `<div class="day-row ${isToday?'today':''}">
+        <div class="day-head">
+          <span class="day-date">${fmtDate(d.date)}</span>
+          <span class="day-name">${fmtWeekday(d.date)}</span>
+          ${isToday?'<span class="day-tag-today">HOJE</span>':''}
+          ${d.tarefaFinal?'<span class="day-tag-rev">REVISÃO FINAL</span>':''}
+        </div>
+        ${inner}
+      </div>`;
+    }).join('');
+    return `<div class="week-block">
+      <div class="week-head"><span>SEMANA · ${fmtDate(wsDate)} a ${fmtDate(weDate)}</span></div>
+      ${daysHtml}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = settingsHtml + summary + weeksHtml;
+}
+
+function saveSettingsAndRegenerate(){
+  const c = getActiveConcurso();
+  const inicio = document.getElementById('inpInicio').value || toISO(todayMidnight());
+  const horas = parseFloat(document.getElementById('inpHoras').value) || 1;
+  const revisao = parseInt(document.getElementById('inpRevisao').value,10);
+  const dows = Array.from(document.querySelectorAll('#cronogramaContent [data-dow]:checked')).map(x=>parseInt(x.dataset.dow,10));
+  c.settings.startDate = inicio;
+  c.settings.hoursPerDay = Math.max(0.25, horas);
+  c.settings.diasRevisaoFinal = isNaN(revisao) ? 3 : Math.max(0,revisao);
+  c.settings.diasDisponiveis = dows.length ? dows : [1,2,3,4,5,6];
+  invalidateSchedule(); saveState(); renderAll();
+}
+
+/* =========================================================================
+   RENDER: EDITAL VERTICALIZADO
+   ========================================================================= */
+function renderEdital(){
+  const c = getActiveConcurso();
+  const el = document.getElementById('editalContent');
+  const geralBlocos = c.edital.filter(b=>b.area==='geral');
+  const espBlocos = c.edital.filter(b=>b.area==='especifico');
+  const editalPriority = computeEditalPriority(c.edital);
+  const rankOf = {}; editalPriority.forEach((b,i)=> rankOf[b.id] = i+1);
+
+  const rankingTable = `
+    <table class="data-table" style="margin-bottom:20px;">
+      <thead><tr><th>#</th><th>Bloco</th><th>Área</th><th>Questões (est.)</th><th>Índice de prioridade</th></tr></thead>
+      <tbody>
+        ${editalPriority.map((b,i)=>`<tr>
+          <td style="font-family:var(--font-mono); font-weight:600;">${i+1}</td>
+          <td>${b.bloco}</td>
+          <td><span class="badge ${b.area}">${b.area==='geral'?'Geral':'Específico'}</span></td>
+          <td style="font-family:var(--font-mono);">${b.questoesEstimadas || b.questoesNum}</td>
+          <td style="font-family:var(--font-mono);">${b.priority}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+
+  function blocoHtml(b, idx, letterPrefix){
+    const done = b.temas.filter(t=>{const s=c.topicStatus[t.id]; return s&&s.estudado;}).length;
+    const pct = Math.round((done/b.temas.length)*100);
+    const rows = b.temas.map(t=>{
+      const st = c.topicStatus[t.id] || {};
+      return `<div class="chk-row">
+        <input type="checkbox" ${st.estudado?'checked':''} onchange="toggleTopicEstudado('${t.id}')">
+        <div class="txt">
+          <span class="${st.estudado?'done':''}">${t.nome}</span>
+          ${st.estudado ? `<div class="meta">estudado em ${fmtDate(fromISO(st.estudadoDate))}${st.rev1Done?' · 1ª revisão ok':''}${st.rev2Done?' · 2ª revisão ok':''}</div>` : ''}
+        </div>
+        <div class="badges">
+          ${t.pontoForte?'<span class="badge forte">Ponto forte</span>':''}
+          ${st.estudado ? `<button class="btn small secondary" onclick="toggleReview('${t.id}',1)">${st.rev1Done?'✓ 1ª rev.':'Marcar 1ª rev.'}</button>` : ''}
+          ${st.estudado ? `<button class="btn small secondary" onclick="toggleReview('${t.id}',2)">${st.rev2Done?'✓ 2ª rev.':'Marcar 2ª rev.'}</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    return `
+      <div class="card" style="margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; gap:10px; flex-wrap:wrap;">
+          <div>
+            <span class="badge prioridade" style="margin-right:6px;">Prioridade #${rankOf[b.id]}</span>
+            <strong style="font-family:var(--font-display); font-size:14.5px;">${letterPrefix}${idx+1}. ${b.bloco}</strong>
+            <div class="stat-sub">${b.questoesEstimadas || ''}</div>
+          </div>
+          <div style="min-width:140px;">
+            <div class="ruler"><div class="ruler-fill" style="width:${pct}%"></div></div>
+            <div class="ruler-label"><span>${done}/${b.temas.length}</span><span>${pct}%</span></div>
+          </div>
+        </div>
+        ${rows}
+      </div>
+    `;
+  }
+
+  el.innerHTML = `
+    <div class="callout">
+      <b>Como ler esta tela:</b> o índice de prioridade é calculado como <span style="font-family:var(--font-mono)">nº de questões estimado × peso da área</span>
+      (Geral=1, Específico=2) — é isso que ordena o cronograma.
+    </div>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">★</span> Ranking de prioridade de estudo</h3>
+      ${rankingTable}
+    </section>
+
+    ${geralBlocos.length ? `
+    <section class="block">
+      <h3 class="block-title"><span class="num">GERAL</span> Conhecimentos Gerais</h3>
+      ${geralBlocos.map((b,i)=>blocoHtml(b,i,'G')).join('')}
+    </section>` : ''}
+
+    ${espBlocos.length ? `
+    <section class="block">
+      <h3 class="block-title"><span class="num">ESPEC.</span> Conhecimentos Específicos</h3>
+      ${espBlocos.map((b,i)=>blocoHtml(b,i,'E')).join('')}
+    </section>` : ''}
+  `;
+}
+
+/* =========================================================================
+   RENDER: DESEMPENHO (com gráficos)
+   ========================================================================= */
+let chartBlocos = null;
+let chartTemas = null;
+
+function updateTemaOptionsFor(selectBlocoId, temaSelectId, includeAllOption){
+  const c = getActiveConcurso();
+  const bloco = c.edital.find(b=>b.id===selectBlocoId) || c.edital[0];
+  const sel = document.getElementById(temaSelectId);
+  if(!sel || !bloco) return;
+  sel.innerHTML = (includeAllOption ? '<option value="">— bloco inteiro / questões mistas —</option>' : '') +
+    bloco.temas.map(t=>`<option value="${t.id}">${t.nome}</option>`).join('');
+}
+function onQBlocoChange(){ updateTemaOptionsFor(document.getElementById('qBloco').value, 'qTema', true); }
+
+function renderDesempenho(){
+  const c = getActiveConcurso();
+  const el = document.getElementById('desempenhoContent');
+  const blocoOptions = c.edital.map(b=>`<option value="${b.id}">${b.bloco}</option>`).join('');
+  const stats = questionStatsByBloco();
+  const overall = overallQuestionStats();
+  const temaStats = questionStatsByTema();
+
+  const rows = Object.values(stats)
+    .filter(s=>s.total>0)
+    .sort((a,b)=> (a.acertos/a.total) - (b.acertos/b.total))
+    .map(s=>{
+      const pct = Math.round((s.acertos/s.total)*100);
+      const cls = perfClass(pct);
+      return `<tr>
+        <td>${s.blocoNome}<br><span class="badge ${s.area}" style="margin-top:4px;">${s.area==='geral'?'Geral':'Específico'}</span></td>
+        <td style="font-family:var(--font-mono);">${s.acertos}/${s.total}</td>
+        <td>
+          <div class="ruler" style="width:110px;"><div class="ruler-fill ${cls}" style="width:${pct}%;"></div></div>
+          <span class="stat-sub">${pct}%</span>
+        </td>
+      </tr>`;
+    }).join('');
+
+  const fracos = Object.values(stats).filter(s=>s.total>=3 && (s.acertos/s.total)<0.7).sort((a,b)=>(a.acertos/a.total)-(b.acertos/b.total));
+  const fracosTemas = Object.values(temaStats).filter(s=>s.total>=3 && (s.acertos/s.total)<0.7).sort((a,b)=>(a.acertos/a.total)-(b.acertos/b.total));
+
+  const temaIndex = computeTemaIndex(c.edital);
+  const logRows = c.questionsLog.slice().reverse().map(q=>{
+    const b = c.edital.find(x=>x.id===q.blocoId);
+    const t = q.temaId ? temaIndex[q.temaId] : null;
+    const pct = q.total? Math.round((q.acertos/q.total)*100) : 0;
+    return `<tr>
+      <td style="font-family:var(--font-mono); font-size:12px;">${q.date}</td>
+      <td>${b?b.bloco:q.blocoId}${t?`<br><span class="stat-sub">${t.nome}</span>`:''}</td>
+      <td style="font-family:var(--font-mono);">${q.acertos}/${q.total} (${pct}%)</td>
+      <td style="font-size:12px; color:var(--ink-soft);">${q.obs||''}</td>
+      <td><button class="btn small secondary" onclick="deleteQuestionLog('${q.id}')">Excluir</button></td>
+    </tr>`;
+  }).join('');
+
+  const blocosComDados = Object.values(stats).filter(s=>s.total>0).sort((a,b)=>(a.acertos/a.total)-(b.acertos/b.total));
+  const temasComDados = Object.values(temaStats).sort((a,b)=>(a.acertos/a.total)-(b.acertos/b.total));
+
+  el.innerHTML = `
+    <section class="block">
+      <h3 class="block-title"><span class="num">1</span> Registrar sessão de questões</h3>
+      <div class="card">
+        <div class="form-grid">
+          <div class="form-row">
+            <label class="f-label">Data</label>
+            <input type="date" id="qDate" value="${toISO(todayMidnight())}">
+          </div>
+          <div class="form-row">
+            <label class="f-label">Bloco / disciplina</label>
+            <select id="qBloco" onchange="onQBlocoChange()">${blocoOptions}</select>
+          </div>
+          <div class="form-row">
+            <label class="f-label">Assunto específico (opcional)</label>
+            <select id="qTema"></select>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label class="f-label">Total de questões</label>
+            <input type="number" id="qTotal" min="1" step="1" placeholder="ex: 10">
+          </div>
+          <div class="form-row">
+            <label class="f-label">Acertos</label>
+            <input type="number" id="qAcertos" min="0" step="1" placeholder="ex: 7">
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="f-label">Observações (o que errou / por quê)</label>
+          <textarea id="qObs" placeholder="ex: confundi prazo de recurso com prazo de posse..."></textarea>
+        </div>
+        <button class="btn" onclick="addQuestionLog()">Registrar</button>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">2</span> Aproveitamento geral</h3>
+      <div class="grid grid-3" style="margin-bottom:14px;">
+        <div class="card"><div class="stat-label">Total de questões</div><div class="stat-value">${overall.total}</div></div>
+        <div class="card"><div class="stat-label">Acertos</div><div class="stat-value green">${overall.acertos}</div></div>
+        <div class="card"><div class="stat-label">Aproveitamento</div><div class="stat-value amber">${overall.pct===null?'—':overall.pct+'%'}</div></div>
+      </div>
+      ${rows ? `<table class="data-table"><thead><tr><th>Bloco</th><th>Acertos</th><th>%</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="empty-state">Nenhuma questão registrada ainda.</div>'}
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">3</span> Gráfico — aproveitamento por disciplina</h3>
+      ${blocosComDados.length ? `<div class="chart-box"><canvas id="chartBlocosCanvas" height="${Math.max(120, blocosComDados.length*36)}"></canvas></div>` : '<div class="empty-state">Registre questões para ver o gráfico por disciplina.</div>'}
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">4</span> Gráfico — aproveitamento por assunto</h3>
+      ${temasComDados.length ? `<div class="chart-box"><canvas id="chartTemasCanvas" height="${Math.max(120, temasComDados.length*32)}"></canvas></div>` : '<div class="empty-state">Registre questões marcando um assunto específico para ver este gráfico.</div>'}
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">5</span> Caderno de erros — pontos de atenção</h3>
+      ${fracos.length ? `<div class="callout red"><b>Blocos</b> com aproveitamento abaixo de 70% (mín. 3 questões):<br><br>` +
+        fracos.map(f=>`• <b>${f.blocoNome}</b>: ${f.acertos}/${f.total} (${Math.round(f.acertos/f.total*100)}%)`).join('<br>') + `</div>`
+        : '<div class="empty-state">Ainda sem dados suficientes por bloco (mín. 3 questões) para apontar pontos fracos.</div>'}
+      ${fracosTemas.length ? `<div class="callout red" style="margin-top:10px;"><b>Assuntos específicos</b> com aproveitamento abaixo de 70%:<br><br>` +
+        fracosTemas.map(f=>`• <b>${f.nome}</b> (${f.blocoNome}): ${f.acertos}/${f.total} (${Math.round(f.acertos/f.total*100)}%)`).join('<br>') + `</div>` : ''}
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">6</span> Histórico de sessões</h3>
+      ${logRows ? `<table class="data-table"><thead><tr><th>Data</th><th>Bloco / assunto</th><th>Resultado</th><th>Observações</th><th></th></tr></thead><tbody>${logRows}</tbody></table>` : '<div class="empty-state">Nenhum registro ainda.</div>'}
+    </section>
+  `;
+
+  updateTemaOptionsFor(document.getElementById('qBloco').value, 'qTema', true);
+  renderCharts(blocosComDados, temasComDados);
+}
+
+function renderCharts(blocosComDados, temasComDados){
+  if(typeof Chart === 'undefined') return;
+  if(chartBlocos){ chartBlocos.destroy(); chartBlocos = null; }
+  if(chartTemas){ chartTemas.destroy(); chartTemas = null; }
+
+  const cvB = document.getElementById('chartBlocosCanvas');
+  if(cvB && blocosComDados.length){
+    const pcts = blocosComDados.map(b=>Math.round(b.acertos/b.total*100));
+    chartBlocos = new Chart(cvB, {
+      type:'bar',
+      data:{ labels: blocosComDados.map(b=>b.blocoNome), datasets:[{ data:pcts, backgroundColor: pcts.map(perfHex), borderRadius:2, maxBarThickness:22 }]},
+      options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.x+'% de aproveitamento'}}},
+        scales:{ x:{min:0,max:100, ticks:{callback:v=>v+'%'}}, y:{ticks:{font:{size:11}}}}}
+    });
+  }
+  const cvT = document.getElementById('chartTemasCanvas');
+  if(cvT && temasComDados.length){
+    const pcts = temasComDados.map(t=>Math.round(t.acertos/t.total*100));
+    chartTemas = new Chart(cvT, {
+      type:'bar',
+      data:{ labels: temasComDados.map(t=>t.nome.length>42?t.nome.slice(0,42)+'…':t.nome), datasets:[{ data:pcts, backgroundColor: pcts.map(perfHex), borderRadius:2, maxBarThickness:18 }]},
+      options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.x+'% de aproveitamento'}}},
+        scales:{ x:{min:0,max:100, ticks:{callback:v=>v+'%'}}, y:{ticks:{font:{size:10}}}}}
+    });
+  }
+}
+
+function addQuestionLog(){
+  const c = getActiveConcurso();
+  const date = document.getElementById('qDate').value || toISO(todayMidnight());
+  const blocoId = document.getElementById('qBloco').value;
+  const temaId = document.getElementById('qTema').value || null;
+  const total = parseInt(document.getElementById('qTotal').value,10);
+  const acertos = parseInt(document.getElementById('qAcertos').value,10);
+  const obs = document.getElementById('qObs').value.trim();
+  if(!total || total<=0 || isNaN(acertos) || acertos<0 || acertos>total){
+    alert('Confira os números: total deve ser maior que zero e acertos não pode ser maior que o total.');
+    return;
+  }
+  c.questionsLog.push({ id: 'q'+Date.now(), date, blocoId, temaId, total, acertos, obs });
+  saveState();
+  renderAll();
+}
+function deleteQuestionLog(id){
+  const c = getActiveConcurso();
+  c.questionsLog = c.questionsLog.filter(q=>q.id!==id);
+  saveState();
+  renderAll();
+}
+
+/* =========================================================================
+   RENDER: REDAÇÃO (critérios e fórmula genéricos por concurso)
+   ========================================================================= */
+function essayValores(e){ return e.valores || { CAC:e.cac, OT:e.ot, DLP:e.dlp }; }
+function computeNota(concurso, valores){
+  const pd = concurso.meta.provaDiscursiva;
+  if(!pd) return null;
+  let sum = 0;
+  pd.criterios.forEach(cr=>{ sum += (Number(valores[cr.nome])||0) * cr.peso; });
+  return sum / pd.divisor;
+}
+
+function renderRedacao(){
+  const c = getActiveConcurso();
+  const el = document.getElementById('redacaoContent');
+  const pd = c.meta.provaDiscursiva;
+
+  if(!pd){
+    document.getElementById('redacaoDesc').textContent = 'Este concurso não tem uma fase discursiva registrada.';
+    el.innerHTML = `<div class="callout">Não há dados de prova discursiva cadastrados para "${c.meta.titulo}". Se este concurso tiver redação ou prova discursiva, peça para eu adicionar essas informações e gerar um novo JSON para importar.</div>`;
+    return;
+  }
+  document.getElementById('redacaoDesc').textContent = pd.descricao || 'Registre seus treinos de redação e acompanhe a evolução.';
+
+  const opts = (max, sel) => { const arr=[]; for(let v=0;v<=max;v++) arr.push(v); return arr.map(v=>`<option value="${v}" ${Number(sel)===v?'selected':''}>${v}</option>`).join(''); };
+  const formulaTxt = pd.criterios.map(cr=>`${cr.nome}×${cr.peso}`).join(' + ');
+
+  const rows = c.essaysLog.slice().reverse().map(e=>{
+    const valores = essayValores(e);
+    const nota = computeNota(c, valores);
+    const aprovado = pd.notaMinima!=null ? nota >= pd.notaMinima : true;
+    const notasTxt = pd.criterios.map(cr=>`${cr.nome} ${valores[cr.nome]!=null?valores[cr.nome]:'—'}`).join(' · ');
+    return `<tr>
+      <td style="font-family:var(--font-mono); font-size:12px;">${e.date}</td>
+      <td>${e.tema}</td>
+      <td style="font-family:var(--font-mono);">${notasTxt}</td>
+      <td style="font-family:var(--font-mono); font-weight:600; ${aprovado?'color:var(--success-deep)':'color:var(--red)'}">${nota.toFixed(2)}</td>
+      <td><button class="btn small secondary" onclick="deleteEssayLog('${e.id}')">Excluir</button></td>
+    </tr>`;
+  }).join('');
+
+  const avg = c.essaysLog.length ? (c.essaysLog.reduce((a,e)=>a+computeNota(c, essayValores(e)),0)/c.essaysLog.length).toFixed(1) : null;
+
+  const criteriosFormHtml = pd.criterios.map((cr,i)=>`
+    <div class="form-row">
+      <label class="f-label">${cr.nome} (0 a ${cr.escalaMax||3})${cr.label?' — '+cr.label:''}</label>
+      <select id="critInput_${i}">${opts(cr.escalaMax||3, 0)}</select>
+    </div>
+  `).join('');
+
+  el.innerHTML = `
+    <div class="callout">
+      <b>Estrutura da discursiva:</b> ${pd.descricao || ''} ${pd.notaMinima!=null ? `Aprovação mínima de ${pd.notaMinima} pontos.` : ''}
+      Critérios: ${pd.criterios.map(cr=>`<b>${cr.nome}</b>${cr.label?' ('+cr.label+')':''} — peso ${cr.peso}`).join('; ')}.
+      Fórmula: <span style="font-family:var(--font-mono)">nota = (${formulaTxt}) ÷ ${pd.divisor}</span>.
+    </div>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">1</span> Registrar treino de redação</h3>
+      <div class="card">
+        <div class="form-grid">
+          <div class="form-row">
+            <label class="f-label">Data</label>
+            <input type="date" id="eDate" value="${toISO(todayMidnight())}">
+          </div>
+          <div class="form-row" style="grid-column: span 2;">
+            <label class="f-label">Tema da redação</label>
+            <input type="text" id="eTema" placeholder="tema praticado">
+          </div>
+        </div>
+        <div class="form-grid">
+          ${criteriosFormHtml}
+        </div>
+        <div class="form-row">
+          <label class="f-label">Observações / autocrítica</label>
+          <textarea id="eObs" placeholder="pontos a melhorar na próxima redação..."></textarea>
+        </div>
+        <button class="btn" onclick="addEssayLog()">Registrar redação</button>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">2</span> Histórico</h3>
+      ${avg ? `<div class="callout info">Nota média das suas autoavaliações: <b>${avg}</b>${pd.notaMinima!=null?` (aprovação a partir de ${pd.notaMinima})`:''}.</div>` : ''}
+      ${rows ? `<table class="data-table"><thead><tr><th>Data</th><th>Tema</th><th>Notas</th><th>Nota final</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="empty-state">Nenhuma redação registrada ainda.</div>'}
+    </section>
+  `;
+}
+function addEssayLog(){
+  const c = getActiveConcurso();
+  const pd = c.meta.provaDiscursiva;
+  if(!pd) return;
+  const date = document.getElementById('eDate').value || toISO(todayMidnight());
+  const tema = document.getElementById('eTema').value.trim() || '(sem tema informado)';
+  const obs = document.getElementById('eObs').value.trim();
+  const valores = {};
+  pd.criterios.forEach((cr,i)=>{ valores[cr.nome] = parseInt(document.getElementById('critInput_'+i).value,10) || 0; });
+  c.essaysLog.push({ id:'e'+Date.now(), date, tema, valores, obs });
+  saveState();
+  renderAll();
+}
+function deleteEssayLog(id){
+  const c = getActiveConcurso();
+  c.essaysLog = c.essaysLog.filter(e=>e.id!==id);
+  saveState();
+  renderAll();
+}
+
+/* =========================================================================
+   RENDER: SOBRE O CONCURSO (genérico, orientado por meta)
+   ========================================================================= */
+function renderSobre(){
+  const c = getActiveConcurso();
+  const meta = c.meta;
+  const el = document.getElementById('sobreContent');
+
+  const infoCards = [
+    ['Cargo / especialidade', meta.subtitulo],
+    ['Órgão / banca', [meta.orgao, meta.banca].filter(Boolean).join(' · ')],
+    ['Requisito', meta.requisito],
+    ['Remuneração', meta.remuneracao],
+    ['Vagas', meta.vagas],
+  ].filter(([,v])=>v);
+
+  const areasTable = meta.provaObjetiva && meta.provaObjetiva.areas ? `
+    <section class="block">
+      <h3 class="block-title"><span class="num">1</span> Estrutura da prova objetiva</h3>
+      <table class="data-table">
+        <thead><tr><th>Área</th><th>Questões</th><th>Peso</th><th>Pontos</th><th>Nota de corte</th></tr></thead>
+        <tbody>
+          ${meta.provaObjetiva.areas.map(a=>`<tr><td>${a.nome}</td><td>${a.questoes ?? '—'}</td><td>${a.peso ?? '—'}</td><td>${a.pontos ?? '—'}</td><td>${a.corte || '—'}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      ${meta.provaObjetiva.obs ? `<div class="stat-sub" style="margin-top:6px;">${meta.provaObjetiva.obs}</div>` : ''}
+    </section>` : '';
+
+  const discursivaSection = meta.provaDiscursiva ? `
+    <section class="block">
+      <h3 class="block-title"><span class="num">2</span> Prova discursiva</h3>
+      <div style="font-size:13.5px; line-height:1.6;">
+        ${meta.provaDiscursiva.descricao || ''} ${meta.provaDiscursiva.notaMinima!=null ? `Aprovação com nota ≥ ${meta.provaDiscursiva.notaMinima} pontos.` : ''}
+        ${meta.provaDiscursiva.criterios ? ' Critérios: ' + meta.provaDiscursiva.criterios.map(cr=>`${cr.nome} (peso ${cr.peso})`).join(', ') + '.' : ''}
+      </div>
+    </section>` : '';
+
+  const datasSection = meta.datasChave && meta.datasChave.length ? `
+    <section class="block">
+      <h3 class="block-title"><span class="num">3</span> Datas-chave</h3>
+      <table class="data-table">
+        <thead><tr><th>Evento</th><th>Data</th></tr></thead>
+        <tbody>
+          ${meta.datasChave.map(d=>`<tr><td>${d.evento}</td><td>${d.data}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </section>` : '';
+
+  el.innerHTML = `
+    <div class="grid grid-2" style="margin-bottom:20px;">
+      ${infoCards.map(([label,val])=>`
+        <div class="card">
+          <div class="stat-label">${label}</div>
+          <div style="font-size:14.5px; margin-top:4px;">${val}</div>
+        </div>`).join('')}
+    </div>
+    ${areasTable}
+    ${discursivaSection}
+    ${datasSection}
+    ${meta.observacaoExtra ? `<div class="callout">${meta.observacaoExtra}</div>` : ''}
+  `;
+}
+
+/* =========================================================================
+   NAV / RENDER ALL
+   ========================================================================= */
+function switchTab(tab){
+  document.querySelectorAll('.sidenav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('.sheet').forEach(s=>s.classList.toggle('active', s.dataset.sheet===tab));
+}
+document.getElementById('sideNav').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-tab]');
+  if(btn) switchTab(btn.dataset.tab);
+});
+
+function renderAll(){
+  invalidateSchedule();
+  renderTitleBlock();
+  renderConcursos();
+  renderPainel();
+  renderCronograma();
+  renderEdital();
+  renderDesempenho();
+  renderRedacao();
+  renderSobre();
+}
+
+(async function init(){
+  await loadState();
+  renderBackupBar();
+  renderAll();
+})();
+</script>
+</body>
+</html>
