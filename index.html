@@ -367,7 +367,144 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 <script>
+/* =========================================================================
+   SINCRONIZAÇÃO COM GOOGLE DRIVE
+   Escopo drive.file: o app só enxerga arquivos que ele mesmo cria — nada
+   do resto do seu Drive fica visível/acessível.
+   ========================================================================= */
+const GOOGLE_CLIENT_ID = '485925395423-p8f7us87qun9r89074jom3tdcvksnq1s.apps.googleusercontent.com';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_FOLDER_NAME = 'Servidor - Mentoria de Estudos';
+const DRIVE_FILE_NAME = 'mentor-estudos-dados.json';
+
+let tokenClient = null;
+let googleAccessToken = null;
+let driveFolderId = null;
+let driveFileId = null;
+let driveSyncStatus = 'disconnected'; // 'disconnected' | 'connecting' | 'connected' | 'error' | 'expired'
+let lastDriveSyncAt = null;
+
+function trySetupGoogleAuth(retries){
+  if(window.google && google.accounts && google.accounts.oauth2){
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: handleTokenResponse
+    });
+    return;
+  }
+  if(retries > 0) setTimeout(()=>trySetupGoogleAuth(retries-1), 300);
+}
+
+async function handleTokenResponse(resp){
+  if(resp.error){
+    driveSyncStatus = 'error';
+    renderBackupBar();
+    return;
+  }
+  googleAccessToken = resp.access_token;
+  driveSyncStatus = 'connecting';
+  renderBackupBar();
+  try{
+    await ensureDriveFileAndFolder();
+    await syncFromDrive();
+    driveSyncStatus = 'connected';
+  }catch(e){
+    console.error('Erro ao conectar com o Drive', e);
+    driveSyncStatus = 'error';
+  }
+  renderBackupBar();
+}
+
+function connectGoogleDrive(){
+  if(!tokenClient){ alert('O login do Google ainda está carregando — tente de novo em alguns segundos.'); return; }
+  driveSyncStatus = 'connecting';
+  renderBackupBar();
+  tokenClient.requestAccessToken({ prompt: googleAccessToken ? '' : 'consent' });
+}
+
+async function driveFetch(url, options){
+  options = options || {};
+  const headers = Object.assign({ Authorization: 'Bearer ' + googleAccessToken }, options.headers || {});
+  const res = await fetch(url, Object.assign({}, options, { headers }));
+  if(res.status === 401){ driveSyncStatus = 'expired'; throw new Error('Token do Google expirado, reconecte.'); }
+  return res;
+}
+
+async function driveFindOrCreateFolder(){
+  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  let res = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  let data = await res.json();
+  if(data.files && data.files.length) return data.files[0].id;
+  res = await driveFetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  data = await res.json();
+  return data.id;
+}
+
+async function driveFindOrCreateFile(folderId){
+  const q = encodeURIComponent(`name='${DRIVE_FILE_NAME}' and '${folderId}' in parents and trashed=false`);
+  let res = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  let data = await res.json();
+  if(data.files && data.files.length) return data.files[0].id;
+  res = await driveFetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: DRIVE_FILE_NAME, parents: [folderId] })
+  });
+  data = await res.json();
+  return data.id;
+}
+
+async function ensureDriveFileAndFolder(){
+  driveFolderId = await driveFindOrCreateFolder();
+  driveFileId = await driveFindOrCreateFile(driveFolderId);
+}
+
+async function driveDownload(){
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`);
+  if(res.status === 404) return null;
+  const text = await res.text();
+  if(!text) return null;
+  try{ return JSON.parse(text); }catch(e){ return null; }
+}
+
+async function driveUpload(){
+  if(!driveFileId) return;
+  await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(state)
+  });
+}
+
+async function syncFromDrive(){
+  const remote = await driveDownload();
+  const pareceValido = remote && (('concursos' in remote && 'activeConcursoId' in remote) || 'topicStatus' in remote);
+  if(pareceValido){
+    applyLoadedState(remote);
+    invalidateSchedule();
+    await saveState();
+    renderAll();
+  } else {
+    await driveUpload();
+  }
+  lastDriveSyncAt = new Date();
+}
+
+function manualDriveSync(){
+  if(driveSyncStatus !== 'connected'){ connectGoogleDrive(); return; }
+  driveSyncStatus = 'connecting'; renderBackupBar();
+  syncFromDrive()
+    .then(()=>{ driveSyncStatus = 'connected'; renderBackupBar(); })
+    .catch(e=>{ console.error(e); driveSyncStatus = 'error'; renderBackupBar(); });
+}
+
 /* =========================================================================
    CONCURSOS PRÉ-CARREGADOS (seed)
    ========================================================================= */
@@ -641,6 +778,10 @@ async function saveState(){
   }catch(e){
     console.error('Falha ao salvar', e);
   }
+  if(driveSyncStatus === 'connected' && driveFileId){
+    driveUpload().then(()=>{ lastDriveSyncAt = new Date(); renderBackupBar(); })
+      .catch(e=>{ console.error('Falha ao sincronizar com o Drive', e); renderBackupBar(); });
+  }
   renderBackupBar();
 }
 
@@ -696,15 +837,33 @@ function renderBackupBar(){
   const info = STORAGE_MODE === 'cloud'
     ? { dot:'#7fcf9f', text:'Progresso salvo automaticamente neste artefato do Claude.' }
     : STORAGE_MODE === 'local'
-    ? { dot:'#7fcf9f', text:'Progresso salvo automaticamente neste navegador. Trocando de navegador/dispositivo, use o backup abaixo.' }
-    : { dot:'#e08a6e', text:'Não foi possível salvar automaticamente neste ambiente. Baixe um backup (.json) ao final de cada sessão para não perder o progresso.' };
-  const savedTxt = lastSavedAt ? ('último salvamento ' + lastSavedAt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})) : 'ainda sem alterações salvas nesta sessão';
+    ? { dot:'#7fcf9f', text:'Progresso salvo automaticamente neste navegador.' }
+    : { dot:'#e08a6e', text:'Não foi possível salvar automaticamente neste ambiente.' };
+  const savedTxt = lastSavedAt ? ('salvo às ' + lastSavedAt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})) : 'ainda sem alterações salvas nesta sessão';
+
+  const driveInfo = driveSyncStatus === 'connected'
+    ? { dot:'#7fcf9f', text: 'Sincronizado com o Google Drive' + (lastDriveSyncAt ? (' · ' + lastDriveSyncAt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})) : '') }
+    : driveSyncStatus === 'connecting'
+    ? { dot:'#e8a33d', text: 'Conectando ao Google Drive...' }
+    : (driveSyncStatus === 'error' || driveSyncStatus === 'expired')
+    ? { dot:'#c9553f', text: 'Falha na conexão com o Google Drive — clique para reconectar' }
+    : { dot:'#5a6b5f', text: 'Google Drive não conectado (sincroniza entre computadores)' };
+
   el.innerHTML = `
-    <div style="display:flex; align-items:center;">
-      <span class="status-dot" style="background:${info.dot};"></span>
-      <span>${info.text} <span style="opacity:.65;">(${savedTxt})</span></span>
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <div style="display:flex; align-items:center;">
+        <span class="status-dot" style="background:${info.dot};"></span>
+        <span>${info.text} <span style="opacity:.65;">(${savedTxt})</span></span>
+      </div>
+      <div style="display:flex; align-items:center;">
+        <span class="status-dot" style="background:${driveInfo.dot};"></span>
+        <span>${driveInfo.text}</span>
+      </div>
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      ${driveSyncStatus==='connected'
+        ? `<button class="btn small secondary on-dark" onclick="manualDriveSync()">🔄 Sincronizar agora</button>`
+        : `<button class="btn small on-dark" style="background:var(--amber-deep); color:var(--white); border:none;" onclick="connectGoogleDrive()">🔗 Conectar Google Drive</button>`}
       <button class="btn small secondary on-dark" onclick="exportBackup()">⬇ Baixar backup</button>
       <button class="btn small secondary on-dark" onclick="document.getElementById('restoreFileInput').click()">⬆ Restaurar backup</button>
       <input type="file" id="restoreFileInput" accept="application/json" style="display:none" onchange="importBackupFile(this)">
@@ -1777,6 +1936,7 @@ function renderAll(){
   await loadState();
   renderBackupBar();
   renderAll();
+  trySetupGoogleAuth(15);
 })();
 </script>
 </body>
