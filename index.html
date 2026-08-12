@@ -385,6 +385,7 @@ let driveFolderId = null;
 let driveFileId = null;
 let driveSyncStatus = 'disconnected'; // 'disconnected' | 'connecting' | 'connected' | 'error' | 'expired'
 let lastDriveSyncAt = null;
+let silentAttemptInProgress = false;
 
 function trySetupGoogleAuth(retries){
   if(window.google && google.accounts && google.accounts.oauth2){
@@ -393,14 +394,28 @@ function trySetupGoogleAuth(retries){
       scope: DRIVE_SCOPE,
       callback: handleTokenResponse
     });
+    attemptSilentReconnect();
     return;
   }
   if(retries > 0) setTimeout(()=>trySetupGoogleAuth(retries-1), 300);
 }
 
+function attemptSilentReconnect(){
+  // tenta reconectar sem popup, sem pedir clique do usuário.
+  // Se o navegador bloquear (ex: cookies de terceiros), falha em silêncio.
+  if(!tokenClient) return;
+  silentAttemptInProgress = true;
+  driveSyncStatus = 'connecting';
+  renderBackupBar();
+  tokenClient.requestAccessToken({ prompt: '' });
+}
+
 async function handleTokenResponse(resp){
+  const wasSilent = silentAttemptInProgress;
+  silentAttemptInProgress = false;
   if(resp.error){
-    driveSyncStatus = 'error';
+    // tentativa silenciosa que falhou não é um erro de verdade — só volta ao normal, sem alarme
+    driveSyncStatus = wasSilent ? 'disconnected' : 'error';
     renderBackupBar();
     return;
   }
@@ -413,13 +428,14 @@ async function handleTokenResponse(resp){
     driveSyncStatus = 'connected';
   }catch(e){
     console.error('Erro ao conectar com o Drive', e);
-    driveSyncStatus = 'error';
+    driveSyncStatus = wasSilent ? 'disconnected' : 'error';
   }
   renderBackupBar();
 }
 
 function connectGoogleDrive(){
   if(!tokenClient){ alert('O login do Google ainda está carregando — tente de novo em alguns segundos.'); return; }
+  silentAttemptInProgress = false;
   driveSyncStatus = 'connecting';
   renderBackupBar();
   tokenClient.requestAccessToken({ prompt: googleAccessToken ? '' : 'consent' });
