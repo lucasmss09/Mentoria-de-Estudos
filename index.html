@@ -216,6 +216,29 @@
   .day-name{ font-size:11.5px; color:var(--ink-soft); text-transform:capitalize;}
   .day-tag-today{ font-family:var(--font-mono); font-size:9.5px; background:var(--amber-deep); color:white; padding:1px 6px; border-radius:2px;}
   .day-tag-rev{ font-family:var(--font-mono); font-size:9.5px; background:var(--tag-rev); color:white; padding:1px 6px; border-radius:2px;}
+  .day-tag-atraso{ font-family:var(--font-mono); font-size:9.5px; background:var(--red); color:white; padding:1px 6px; border-radius:2px;}
+  .day-tag-ok{ font-family:var(--font-mono); font-size:9.5px; background:var(--success-deep); color:white; padding:1px 6px; border-radius:2px;}
+  .day-tag-adiantar{ font-family:var(--font-mono); font-size:9.5px; background:var(--amber-deep); color:white; padding:1px 6px; border-radius:2px;}
+  .day-tag-travado{ font-family:var(--font-mono); font-size:9.5px; background:#8a8577; color:white; padding:1px 6px; border-radius:2px;}
+  .day-row.atrasado{ background:#faeae6; }
+  /* pomodoro */
+  .pomo-box{ background:var(--bp-bg); color:var(--white); border-radius:var(--radius); padding:16px 18px; border:1px solid var(--bp-bg-deep);
+    background-image: linear-gradient(var(--bp-line-faint) 1px, transparent 1px), linear-gradient(90deg, var(--bp-line-faint) 1px, transparent 1px); background-size:18px 18px; }
+  .pomo-time{ font-family:var(--font-mono); font-size:44px; font-weight:600; color:var(--white); letter-spacing:.02em; }
+  .pomo-mode{ font-family:var(--font-mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--bp-line); margin-bottom:4px; }
+  .pomo-btns{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .pomo-btn{ font-family:var(--font-mono); font-size:12px; font-weight:600; border:1px solid var(--bp-line); background:transparent; color:var(--bp-line); border-radius:2px; padding:7px 12px; cursor:pointer; }
+  .pomo-btn:hover{ background:rgba(127,207,159,0.12); color:var(--white); }
+  .pomo-btn.primary{ background:var(--amber-deep); border-color:var(--amber-deep); color:var(--white); }
+  .pomo-btn.primary:hover{ background:#a86a13; }
+  /* heatmap streak */
+  .heatmap{ display:flex; flex-wrap:wrap; gap:3px; margin-top:4px; }
+  .heat-cell{ width:13px; height:13px; border-radius:2px; background:#e2dcc9; }
+  .heat-cell.lvl1{ background:#bfe3cd; }
+  .heat-cell.lvl2{ background:#7fcf9f; }
+  .heat-cell.lvl3{ background:#3f8a5f; }
+  .heat-cell.today{ outline:2px solid var(--amber-deep); outline-offset:1px; }
+  .streak-num{ font-family:var(--font-mono); font-size:28px; font-weight:600; color:var(--amber-deep); }
   .day-subhead{ font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin:8px 0 2px;}
   .q-reminder{ font-size:12px; color:var(--ink-soft); font-style:italic; padding:6px 0 0; }
 
@@ -636,7 +659,10 @@ function newConcursoRuntime(seed){
     settings: JSON.parse(JSON.stringify(seed.settingsDefault || { hoursPerDay:1, diasDisponiveis:[1,2,3,4,5,6], diasRevisaoFinal:3, startDate: toISO(todayMidnight()) })),
     topicStatus: {},
     questionsLog: [],
-    essaysLog: []
+    essaysLog: [],
+    plan: null,          // plano CONGELADO: { assignments:[{date, temaIds, revisoes, tarefaFinal}], generatedAt }
+    studyMinutes: 0,     // total de minutos de estudo lançados nas metas diárias
+    pomodoroMinutes: 0   // total de minutos cronometrados no pomodoro
   };
 }
 function defaultState(){
@@ -712,6 +738,9 @@ function applyLoadedState(parsed){
       if(!c.questionsLog) c.questionsLog = [];
       if(!c.essaysLog) c.essaysLog = [];
       if(!c.settings) c.settings = { hoursPerDay:1, diasDisponiveis:[1,2,3,4,5,6], diasRevisaoFinal:3, startDate: toISO(todayMidnight()) };
+      if(typeof c.studyMinutes !== 'number') c.studyMinutes = 0;
+      if(typeof c.pomodoroMinutes !== 'number') c.pomodoroMinutes = 0;
+      if(c.plan === undefined) c.plan = null; // será gerado sob demanda por ensurePlan
     });
     if(!state.concursos[state.activeConcursoId]) state.activeConcursoId = Object.keys(state.concursos)[0];
   } else if(parsed && parsed.topicStatus){
@@ -903,7 +932,11 @@ function getWeekStart(date){ const d=new Date(date); const day=d.getDay(); const
 function diffDays(a,b){ return Math.round((b-a)/86400000); }
 
 /* =========================================================================
-   GERADOR DE CRONOGRAMA (prioridade + revisão espaçada) — por concurso ativo
+   GERADOR DE CRONOGRAMA — plano CONGELADO (fixo) + revisão espaçada
+   O plano é gerado UMA vez e salvo em concurso.plan. A partir daí, cada tema
+   fica carimbado num dia e não migra mais. Só é regenerado quando o usuário
+   muda as configurações (horas/dia, dias disponíveis, início) ou clica em
+   "regerar plano".
    ========================================================================= */
 function buildQueue(editalPriority, topicStatus){
   const pointers = editalPriority.map(()=>0);
@@ -927,33 +960,32 @@ function buildQueue(editalPriority, topicStatus){
   return queue;
 }
 
-function generateSchedule(){
-  const concurso = getActiveConcurso();
+// Gera o plano CONGELADO (chamado uma vez, ou ao regerar). Retorna assignments:
+// [{ dateISO, temaIds:[], revisoes:[{key,temaId,revIndex,nome,blocoNome,area}], tarefaFinal }]
+function buildFrozenPlan(concurso){
   const examDate = fromISO(concurso.meta.examDate);
   const editalPriority = computeEditalPriority(concurso.edital);
   const temaIndex = computeTemaIndex(concurso.edital);
-  const today = todayMidnight();
   const settings = concurso.settings;
-  const topicStatus = concurso.topicStatus;
   const start = fromISO(settings.startDate);
-  const effectiveStart = start > today ? start : today;
 
   const days = [];
-  let cursor = new Date(effectiveStart);
+  let cursor = new Date(start);
   while(cursor < examDate){
     if(settings.diasDisponiveis.includes(cursor.getDay())) days.push(new Date(cursor));
     cursor = addDays(cursor,1);
   }
-  if(days.length === 0) return { schedule: [], examPassed: today >= examDate, totalDays:0, effectiveStart, examDate };
+  if(days.length === 0) return { assignments: [], generatedAt: new Date().toISOString() };
 
   const reservedCount = Math.min(settings.diasRevisaoFinal, Math.max(1, Math.floor(days.length*0.35)));
   let contentDaysDates = days.slice(0, Math.max(0, days.length - reservedCount));
   let finalDates = days.slice(Math.max(0, days.length - reservedCount));
 
-  let queue = buildQueue(editalPriority, topicStatus);
+  // fila com TODOS os temas (plano congela tudo, independente de status)
+  let queue = buildQueue(editalPriority, {});
   const dayBudget = settings.hoursPerDay*60;
   const tolerance = dayBudget*1.35 + 12;
-  const dayEntries = [];
+  const entries = [];
 
   for(const day of contentDaysDates){
     if(queue.length === 0){ finalDates = [day, ...finalDates]; continue; }
@@ -961,43 +993,147 @@ function generateSchedule(){
     while(idx < queue.length && novos.length < 6){
       const item = queue[idx];
       if(novos.length===0 || used+item.min <= tolerance){
-        novos.push(item); used += item.min; queue.splice(idx,1);
+        novos.push(item.id); used += item.min; queue.splice(idx,1);
         if(used >= dayBudget) break;
       } else idx++;
     }
-    dayEntries.push({ date: day, novos, minutos: used, tarefaFinal:null, revisoesEspacadas:[], questoesSugestao: novos.length>0 });
+    entries.push({ dateISO: toISO(day), temaIds: novos, revisoes: [], tarefaFinal: null });
   }
-  if(queue.length && dayEntries.length){ dayEntries[dayEntries.length-1].novos.push(...queue); queue = []; }
+  if(queue.length && entries.length){ entries[entries.length-1].temaIds.push(...queue.map(q=>q.id)); queue = []; }
 
   finalDates.sort((a,b)=>a-b);
   finalDates.forEach((day,i)=>{
-    dayEntries.push({ date: day, novos: [], minutos:0, tarefaFinal: REVISION_TASKS[i % REVISION_TASKS.length], revisoesEspacadas:[], questoesSugestao:false });
+    entries.push({ dateISO: toISO(day), temaIds: [], revisoes: [], tarefaFinal: REVISION_TASKS[i % REVISION_TASKS.length] });
   });
-  dayEntries.sort((a,b)=>a.date-b.date);
+  entries.sort((a,b)=> fromISO(a.dateISO) - fromISO(b.dateISO));
 
-  Object.keys(topicStatus).forEach(temaId=>{
-    const st = topicStatus[temaId];
-    if(!st || !st.estudado || !st.estudadoDate) return;
+  // revisões espaçadas: +2 e +6 dias após o dia em que o tema foi PLANEJADO.
+  // Como o plano é fixo, a revisão é ancorada na data planejada do tema (não na data real de estudo).
+  const temaPlanDate = {};
+  entries.forEach(e => e.temaIds.forEach(id => { temaPlanDate[id] = e.dateISO; }));
+
+  Object.keys(temaPlanDate).forEach(temaId=>{
     const info = temaIndex[temaId];
     if(!info) return;
-    const studiedDate = fromISO(st.estudadoDate);
-    const reviews = [
-      { idx:1, due: addDays(studiedDate,2), done: !!st.rev1Done },
-      { idx:2, due: addDays(studiedDate,6), done: !!st.rev2Done },
-    ];
-    reviews.forEach(r=>{
-      if(r.done) return;
-      if(r.due >= examDate) return;
-      const target = r.due > effectiveStart ? r.due : effectiveStart;
-      let slot = dayEntries.find(e => e.date >= target);
-      if(!slot) slot = dayEntries[dayEntries.length-1];
+    const planned = fromISO(temaPlanDate[temaId]);
+    [ {revIndex:1, off:2}, {revIndex:2, off:6} ].forEach(r=>{
+      const due = addDays(planned, r.off);
+      if(due >= examDate) return;
+      // encontra o primeiro dia do plano >= due
+      let slot = entries.find(e => fromISO(e.dateISO) >= due);
+      if(!slot) slot = entries[entries.length-1];
       if(slot){
-        slot.revisoesEspacadas.push({ temaId, revIndex:r.idx, nome:info.nome, blocoNome:info.blocoNome, area:info.area });
+        slot.revisoes.push({ key: 'rev:'+temaId+':'+r.revIndex, temaId, revIndex:r.revIndex, nome:info.nome, blocoNome:info.blocoNome, area:info.area });
       }
     });
   });
 
-  return { schedule: dayEntries, examPassed:false, totalDays: days.length, contentDaysCount: contentDaysDates.length, reservedCount, effectiveStart, examDate };
+  return { assignments: entries, generatedAt: new Date().toISOString() };
+}
+
+function ensurePlan(concurso){
+  if(!concurso.plan || !concurso.plan.assignments){
+    concurso.plan = buildFrozenPlan(concurso);
+  }
+  return concurso.plan;
+}
+
+// Um item de revisão está "concluído" se topicStatus[temaId].revNDone
+function revisaoDone(topicStatus, rev){
+  const st = topicStatus[rev.temaId];
+  if(!st) return false;
+  return rev.revIndex===1 ? !!st.rev1Done : !!st.rev2Done;
+}
+function dayComplete(assignment, topicStatus){
+  const temasOk = assignment.temaIds.every(id => topicStatus[id] && topicStatus[id].estudado);
+  const revsOk = assignment.revisoes.every(r => revisaoDone(topicStatus, r));
+  const hasWork = assignment.temaIds.length>0 || assignment.revisoes.length>0;
+  return hasWork ? (temasOk && revsOk) : true;
+}
+function dayHasWork(assignment){
+  return assignment.temaIds.length>0 || assignment.revisoes.length>0 || !!assignment.tarefaFinal;
+}
+
+// Estado de cada dia: 'concluido' | 'atrasado' | 'hoje' | 'adiantar' | 'travado' | 'livre' | 'revisao-final'
+// Regras: passado+hoje sempre liberados (passado incompleto = atrasado). Entre futuros, só o
+// primeiro pendente libera ('adiantar'), e só se todo passado+hoje estiver concluído.
+function computeLockStates(concurso){
+  const plan = ensurePlan(concurso);
+  const topicStatus = concurso.topicStatus;
+  const today = todayMidnight();
+  const assignments = plan.assignments;
+
+  let pastTodayAllDone = true;
+  for(const a of assignments){
+    const d = fromISO(a.dateISO);
+    const isFuture = d > today && !isSameDay(d, today);
+    if(!isFuture && dayHasWork(a) && !dayComplete(a, topicStatus)){ pastTodayAllDone = false; break; }
+  }
+  let firstFuturePendingIdx = -1;
+  for(let i=0;i<assignments.length;i++){
+    const a = assignments[i];
+    const d = fromISO(a.dateISO);
+    const isFuture = d > today && !isSameDay(d, today);
+    if(isFuture && dayHasWork(a) && !dayComplete(a, topicStatus)){ firstFuturePendingIdx = i; break; }
+  }
+
+  const states = {};
+  for(let i=0;i<assignments.length;i++){
+    const a = assignments[i];
+    const d = fromISO(a.dateISO);
+    const isToday = isSameDay(d, today);
+    const isPast = d < today && !isToday;
+    const isFuture = d > today && !isToday;
+    const complete = dayComplete(a, topicStatus);
+    const hasWork = dayHasWork(a);
+    let state;
+    if(!hasWork){ state = 'livre'; }
+    else if(complete){ state = 'concluido'; }
+    else if(isPast){ state = 'atrasado'; }
+    else if(isToday){ state = 'hoje'; }
+    else { state = (i===firstFuturePendingIdx && pastTodayAllDone) ? 'adiantar' : 'travado'; }
+    states[a.dateISO] = state;
+  }
+  return states;
+}
+function isDayUnlocked(state){
+  return state==='hoje' || state==='atrasado' || state==='adiantar' || state==='concluido';
+}
+
+// Constrói a "visão" do schedule (com objetos de tema resolvidos) a partir do plano congelado.
+function generateSchedule(){
+  const concurso = getActiveConcurso();
+  const examDate = fromISO(concurso.meta.examDate);
+  const today = todayMidnight();
+  if(today >= examDate) return { schedule: [], examPassed: true, totalDays:0, examDate };
+
+  const plan = ensurePlan(concurso);
+  const temaIndex = computeTemaIndex(concurso.edital);
+  const lockStates = computeLockStates(concurso);
+  const topicStatus = concurso.topicStatus;
+
+  const schedule = plan.assignments.map(a=>{
+    const novos = a.temaIds.map(id=>{
+      const info = temaIndex[id];
+      return info ? {...info} : null;
+    }).filter(Boolean);
+    return {
+      date: fromISO(a.dateISO),
+      dateISO: a.dateISO,
+      novos,
+      revisoesEspacadas: a.revisoes.slice(),
+      tarefaFinal: a.tarefaFinal,
+      questoesSugestao: novos.length>0,
+      lockState: lockStates[a.dateISO],
+      complete: dayComplete(a, topicStatus)
+    };
+  });
+
+  const totalDays = plan.assignments.filter(a=>dayHasWork(a)).length;
+  const effectiveStart = plan.assignments.length ? fromISO(plan.assignments[0].dateISO) : today;
+  const reservedCount = plan.assignments.filter(a=>a.tarefaFinal).length;
+  const contentDaysCount = plan.assignments.filter(a=>a.temaIds.length>0).length;
+  return { schedule, examPassed:false, totalDays, contentDaysCount, reservedCount, effectiveStart, examDate };
 }
 
 let SCHEDULE_CACHE = null;
@@ -1047,10 +1183,77 @@ function overallQuestionStats(){
 function perfClass(pct){ return pct<50 ? 'red' : (pct<70 ? '' : 'green'); }
 function perfHex(pct){ return pct<50 ? '#c9553f' : (pct<70 ? '#c98420' : '#3f8a5f'); }
 
+/* ---- TEMPO DE ESTUDO -------------------------------------------------
+   Total = minutos das metas diárias (studyMinutes) + tempo lançado nas
+   questões (por sessão) + tempo do pomodoro (pomodoroMinutes).            */
+function questionMinutesTotal(concurso){
+  return concurso.questionsLog.reduce((a,q)=> a + (Number(q.minutos)||0), 0);
+}
+function totalStudyMinutes(concurso){
+  return (Number(concurso.studyMinutes)||0) + (Number(concurso.pomodoroMinutes)||0) + questionMinutesTotal(concurso);
+}
+function fmtMinutes(min){
+  min = Math.round(min||0);
+  const h = Math.floor(min/60), m = min%60;
+  if(h===0) return m+'min';
+  return h+'h'+(m? ' '+m+'min':'');
+}
+
+/* ---- SEQUÊNCIA (STREAK) DE DIAS COM ≥10 QUESTÕES --------------------
+   Conta somando as questões de TODOS os concursos por dia.               */
+function questionsPerDayAllConcursos(){
+  const perDay = {}; // dateISO -> total de questões
+  Object.values(state.concursos).forEach(c=>{
+    (c.questionsLog||[]).forEach(q=>{
+      if(!q.date) return;
+      perDay[q.date] = (perDay[q.date]||0) + (Number(q.total)||0);
+    });
+  });
+  return perDay;
+}
+function streakStats(){
+  const perDay = questionsPerDayAllConcursos();
+  const qualifDays = Object.keys(perDay).filter(d => perDay[d] >= 10).sort();
+  const totalQualif = qualifDays.length;
+
+  // streak atual: conta dias consecutivos (de calendário) terminando hoje ou ontem
+  const set = new Set(qualifDays);
+  let current = 0;
+  let cursor = todayMidnight();
+  // se hoje ainda não bateu 10, começa a contagem a partir de ontem (não quebra o streak no meio do dia)
+  if(!set.has(toISO(cursor))) cursor = addDays(cursor,-1);
+  while(set.has(toISO(cursor))){ current++; cursor = addDays(cursor,-1); }
+
+  // melhor streak
+  let best = 0, run = 0, prev = null;
+  qualifDays.forEach(d=>{
+    if(prev && diffDays(fromISO(prev), fromISO(d))===1) run++;
+    else run = 1;
+    if(run>best) best = run;
+    prev = d;
+  });
+  return { perDay, qualifDays, totalQualif, current, best };
+}
+
 function toggleTopicEstudado(id){
   const c = getActiveConcurso();
+  // trava: só permite marcar se o dia do tema estiver liberado
+  const lock = computeLockStates(c);
+  const plan = ensurePlan(c);
+  const assignment = plan.assignments.find(a => a.temaIds.includes(id));
+  if(assignment){
+    const estado = lock[assignment.dateISO];
+    const cur0 = c.topicStatus[id] || {};
+    // permitir DESMARCAR sempre; para MARCAR, exige dia liberado
+    if(!cur0.estudado && !isDayUnlocked(estado)){
+      alert('Este dia ainda está travado. Conclua primeiro as metas dos dias anteriores (atrasados e de hoje) para liberá-lo.');
+      return;
+    }
+  }
   const cur = c.topicStatus[id] || {};
   if(cur.estudado){
+    const keep = {};
+    // ao desmarcar, preserva flags de revisão? não — reinicia o tema
     c.topicStatus[id] = {};
   } else {
     c.topicStatus[id] = { estudado:true, estudadoDate: toISO(todayMidnight()), rev1Done:false, rev2Done:false };
@@ -1060,9 +1263,31 @@ function toggleTopicEstudado(id){
 function toggleReview(id, idx){
   const c = getActiveConcurso();
   const cur = c.topicStatus[id] || {};
+  // trava revisão pela data em que a revisão está planejada
+  const plan = ensurePlan(c);
+  const lock = computeLockStates(c);
+  const revKey = 'rev:'+id+':'+idx;
+  const assignment = plan.assignments.find(a => a.revisoes.some(r=>r.key===revKey));
+  const jaFeita = idx===1 ? cur.rev1Done : cur.rev2Done;
+  if(assignment && !jaFeita){
+    const estado = lock[assignment.dateISO];
+    if(!isDayUnlocked(estado)){
+      alert('A revisão deste dia ainda está travada. Conclua as metas dos dias anteriores primeiro.');
+      return;
+    }
+  }
   if(idx===1) cur.rev1Done = !cur.rev1Done; else cur.rev2Done = !cur.rev2Done;
   c.topicStatus[id] = cur;
   invalidateSchedule(); saveState(); renderAll();
+}
+
+// lança/edita minutos de estudo de uma meta diária (aba cronograma)
+function addStudyMinutes(deltaOrValue, mode){
+  const c = getActiveConcurso();
+  const v = Number(deltaOrValue)||0;
+  if(mode==='set') c.studyMinutes = Math.max(0, v);
+  else c.studyMinutes = Math.max(0, (Number(c.studyMinutes)||0) + v);
+  saveState(); renderAll();
 }
 
 /* =========================================================================
@@ -1240,6 +1465,9 @@ function renderPainel(){
   const weekTemasTotal = weekEntries.reduce((a,d)=>a + d.novos.length, 0);
   const weekTemasDone = weekEntries.reduce((a,d)=> a + d.novos.filter(t=>{const s=c.topicStatus[t.id]; return s&&s.estudado;}).length, 0);
 
+  const horasTotais = totalStudyMinutes(c);
+  const streak = streakStats();
+
   el.innerHTML = `
     <div class="today-card">
       <div class="lbl">Hoje · ${fmtDateFull(today)}</div>
@@ -1249,7 +1477,6 @@ function renderPainel(){
     <div class="callout info">
       <b>Diagnóstico de tempo:</b> no seu ritmo atual (${c.settings.hoursPerDay}h/dia), restam cerca de <b>${studyHoursLeft}h</b> de estudo até a reta final.
       O cronograma prioriza pelo potencial de pontuação na prova — agora no topo: <b>${top3}</b>.
-      Se conseguir abrir mais tempo por dia, ajuste isso na aba Cronograma: o plano se recalcula sozinho.
     </div>
 
     <div class="grid grid-4" style="margin-bottom:22px;">
@@ -1259,19 +1486,19 @@ function renderPainel(){
         <div class="stat-sub">${countEstudados()} de ${totalTemas} temas</div>
       </div>
       <div class="card">
-        <div class="stat-label">Revisões em dia</div>
-        <div class="stat-value">${Object.values(c.topicStatus).filter(s=>s&&s.rev1Done).length + Object.values(c.topicStatus).filter(s=>s&&s.rev2Done).length}</div>
-        <div class="stat-sub">revisões espaçadas concluídas</div>
+        <div class="stat-label">Horas estudadas</div>
+        <div class="stat-value green">${fmtMinutes(horasTotais)}</div>
+        <div class="stat-sub">metas + questões + pomodoro</div>
       </div>
       <div class="card">
         <div class="stat-label">Questões respondidas</div>
         <div class="stat-value">${restStats.total}</div>
-        <div class="stat-sub">total registrado</div>
+        <div class="stat-sub">${restStats.pct===null?'—':restStats.pct+'% de acerto'}</div>
       </div>
       <div class="card">
-        <div class="stat-label">Aproveitamento geral</div>
-        <div class="stat-value ${restStats.pct!==null && restStats.pct>=60 ? 'green':''}">${restStats.pct===null?'—':restStats.pct+'%'}</div>
-        <div class="stat-sub">${restStats.acertos} acertos registrados</div>
+        <div class="stat-label">Sequência ≥10 questões/dia</div>
+        <div class="streak-num">🔥 ${streak.current}</div>
+        <div class="stat-sub">recorde: ${streak.best} · ${streak.totalQualif} dias no total</div>
       </div>
     </div>
 
@@ -1284,7 +1511,48 @@ function renderPainel(){
     </section>
 
     <section class="block">
-      <h3 class="block-title"><span class="num">B</span> Progresso por área</h3>
+      <h3 class="block-title"><span class="num">B</span> Cronômetro Pomodoro</h3>
+      <div class="grid grid-2">
+        <div class="pomo-box">
+          <div class="pomo-mode" id="pomoMode">Foco</div>
+          <div class="pomo-time" id="pomoDisplay">25:00</div>
+          <div class="pomo-btns">
+            <button class="pomo-btn primary" id="pomoStartBtn" onclick="pomodoroToggle()">Iniciar</button>
+            <button class="pomo-btn" onclick="pomodoroReset()">Zerar</button>
+            <button class="pomo-btn" onclick="pomodoroSwitch('foco')">Foco 25</button>
+            <button class="pomo-btn" onclick="pomodoroSwitch('pausa')">Pausa 5</button>
+          </div>
+          <div class="stat-sub" style="color:var(--bp-line); margin-top:10px;">Cada ciclo de foco concluído soma automaticamente ao seu total de horas estudadas.</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Tempo cronometrado (pomodoro) neste concurso</div>
+          <div class="stat-value">${fmtMinutes(c.pomodoroMinutes)}</div>
+          <div class="stat-sub" style="margin-top:8px;">Tempo em metas: ${fmtMinutes(c.studyMinutes)} · Tempo em questões: ${fmtMinutes(questionMinutesTotal(c))}</div>
+          <div style="margin-top:12px;">
+            <label class="f-label">Somar tempo avulso ao pomodoro (min)</label>
+            <div style="display:flex; gap:6px;">
+              <input type="number" id="inpPomoManual" min="0" step="5" placeholder="ex: 30" style="max-width:120px;">
+              <button class="btn small" onclick="somarPomodoroManual()">+ Somar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">C</span> Constância — dias com ≥10 questões (todos os concursos)</h3>
+      <div class="card">
+        <div style="display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:10px;">
+          <div><span class="streak-num">🔥 ${streak.current}</span> <span class="stat-sub">dias seguidos agora</span></div>
+          <div class="stat-sub">Recorde: <b>${streak.best}</b> dias · Total: <b>${streak.totalQualif}</b> dias qualificados</div>
+        </div>
+        <div class="heatmap" id="heatmap">${renderHeatmap(streak.perDay)}</div>
+        <div class="stat-sub" style="margin-top:8px;">Cada quadradinho é um dia dos últimos 3 meses. Quanto mais escuro, mais questões resolvidas naquele dia (somando todos os concursos). Só contam para a sequência os dias com 10 ou mais.</div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">D</span> Progresso por área</h3>
       <div class="grid grid-2">
         <div class="card">
           <div class="stat-label">Conhecimentos Gerais</div>
@@ -1300,7 +1568,12 @@ function renderPainel(){
     </section>
 
     <section class="block">
-      <h3 class="block-title"><span class="num">C</span> Atalhos</h3>
+      <h3 class="block-title"><span class="num">E</span> Desempenho por disciplina</h3>
+      <div id="painelChartWrap"></div>
+    </section>
+
+    <section class="block">
+      <h3 class="block-title"><span class="num">F</span> Atalhos</h3>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn" onclick="switchTab('desempenho')">Registrar questões</button>
         <button class="btn secondary" onclick="switchTab('redacao')">Registrar redação</button>
@@ -1308,6 +1581,118 @@ function renderPainel(){
       </div>
     </section>
   `;
+
+  renderPainelChart();
+  updatePomodoroDisplay();
+}
+
+/* ---- HEATMAP (últimos ~91 dias) ---- */
+function renderHeatmap(perDay){
+  const today = todayMidnight();
+  const cells = [];
+  for(let i=90;i>=0;i--){
+    const d = addDays(today, -i);
+    const iso = toISO(d);
+    const n = perDay[iso] || 0;
+    let lvl = '';
+    if(n>=20) lvl='lvl3'; else if(n>=10) lvl='lvl2'; else if(n>=1) lvl='lvl1';
+    const isToday = i===0 ? 'today' : '';
+    cells.push(`<div class="heat-cell ${lvl} ${isToday}" title="${fmtDateFull(d)}: ${n} quest${n===1?'ão':'ões'}"></div>`);
+  }
+  return cells.join('');
+}
+
+/* ---- GRÁFICO DO PAINEL (aproveitamento por disciplina) ---- */
+let painelChart = null;
+function renderPainelChart(){
+  const wrap = document.getElementById('painelChartWrap');
+  if(!wrap) return;
+  const stats = questionStatsByBloco();
+  const dados = Object.values(stats).filter(s=>s.total>0).sort((a,b)=>(a.acertos/a.total)-(b.acertos/b.total));
+  if(!dados.length){
+    wrap.innerHTML = '<div class="empty-state">Registre questões (aba Desempenho) para ver o gráfico de aproveitamento aqui.</div>';
+    return;
+  }
+  wrap.innerHTML = `<div class="chart-box"><canvas id="painelChartCanvas" height="${Math.max(120, dados.length*34)}"></canvas></div>`;
+  if(typeof Chart === 'undefined') return;
+  if(painelChart){ painelChart.destroy(); painelChart=null; }
+  const cv = document.getElementById('painelChartCanvas');
+  const pcts = dados.map(d=>Math.round(d.acertos/d.total*100));
+  painelChart = new Chart(cv, {
+    type:'bar',
+    data:{ labels: dados.map(d=>d.blocoNome), datasets:[{ data:pcts, backgroundColor: pcts.map(perfHex), borderRadius:2, maxBarThickness:22 }]},
+    options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:x=>x.parsed.x+'% de aproveitamento'}}},
+      scales:{ x:{min:0,max:100, ticks:{callback:v=>v+'%'}}, y:{ticks:{font:{size:11}}}}}
+  });
+}
+
+/* =========================================================================
+   POMODORO + helpers de tempo avulso
+   ========================================================================= */
+function somarPomodoroManual(){
+  const v = parseInt(document.getElementById('inpPomoManual').value,10);
+  if(!v || v<=0){ alert('Informe minutos maiores que zero.'); return; }
+  const c = getActiveConcurso();
+  c.pomodoroMinutes = (Number(c.pomodoroMinutes)||0) + v;
+  saveState(); renderAll();
+}
+const POMO_DURATIONS = { foco: 25*60, pausa: 5*60 };
+let pomoMode = 'foco';
+let pomoRemaining = POMO_DURATIONS.foco;
+let pomoRunning = false;
+let pomoInterval = null;
+
+function updatePomodoroDisplay(){
+  const disp = document.getElementById('pomoDisplay');
+  const modeEl = document.getElementById('pomoMode');
+  const btn = document.getElementById('pomoStartBtn');
+  if(!disp) return;
+  const m = Math.floor(pomoRemaining/60), s = pomoRemaining%60;
+  disp.textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  if(modeEl) modeEl.textContent = pomoMode==='foco' ? 'Foco' : 'Pausa';
+  if(btn) btn.textContent = pomoRunning ? 'Pausar' : 'Iniciar';
+}
+function pomodoroToggle(){
+  if(pomoRunning){ pomodoroStop(); }
+  else {
+    pomoRunning = true;
+    updatePomodoroDisplay();
+    pomoInterval = setInterval(()=>{
+      pomoRemaining--;
+      if(pomoRemaining <= 0){
+        clearInterval(pomoInterval); pomoInterval=null; pomoRunning=false;
+        if(pomoMode==='foco'){
+          const c = getActiveConcurso();
+          c.pomodoroMinutes = (Number(c.pomodoroMinutes)||0) + Math.round(POMO_DURATIONS.foco/60);
+          saveState();
+          alert('Ciclo de foco concluído! ' + Math.round(POMO_DURATIONS.foco/60) + ' min somados ao seu total. Hora de uma pausa.');
+          pomodoroSwitch('pausa');
+          renderAll();
+        } else {
+          alert('Pausa concluída! Bora para o próximo ciclo de foco.');
+          pomodoroSwitch('foco');
+        }
+        return;
+      }
+      updatePomodoroDisplay();
+    }, 1000);
+  }
+}
+function pomodoroStop(){
+  pomoRunning = false;
+  if(pomoInterval){ clearInterval(pomoInterval); pomoInterval=null; }
+  updatePomodoroDisplay();
+}
+function pomodoroReset(){
+  pomodoroStop();
+  pomoRemaining = POMO_DURATIONS[pomoMode];
+  updatePomodoroDisplay();
+}
+function pomodoroSwitch(mode){
+  pomodoroStop();
+  pomoMode = mode;
+  pomoRemaining = POMO_DURATIONS[mode];
+  updatePomodoroDisplay();
 }
 
 function renderWeekGrid(weekStart, today, schedule){
@@ -1378,9 +1763,19 @@ function renderCronograma(){
         <label class="f-label">Dias disponíveis na semana</label>
         <div class="dow-picker">${dowPicker}</div>
       </div>
-      <div style="margin-top:12px;">
-        <button class="btn" onclick="saveSettingsAndRegenerate()">Salvar e recalcular cronograma</button>
+      <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <button class="btn" onclick="saveSettingsAndRegenerate()">Salvar e regerar plano</button>
+        <button class="btn secondary" onclick="regeneratePlan()">Regerar plano (mesmas configs)</button>
+        <button class="btn danger" onclick="reiniciarProgresso()">Reiniciar do zero</button>
+        <div style="flex:1; min-width:180px;">
+          <label class="f-label">Registrar tempo de estudo das metas de hoje (min)</label>
+          <div style="display:flex; gap:6px;">
+            <input type="number" id="inpStudyMin" min="0" step="5" placeholder="ex: 60" style="max-width:120px;">
+            <button class="btn small" onclick="lancarTempoMetas()">+ Somar ao total</button>
+          </div>
+        </div>
       </div>
+      <div class="stat-sub" style="margin-top:8px;">Tempo de metas acumulado neste concurso: <b>${fmtMinutes(c.studyMinutes)}</b>. O total geral de horas (metas + questões + pomodoro) aparece no Painel.</div>
     </div>
   `;
 
@@ -1414,9 +1809,21 @@ function renderCronograma(){
     const days = weeks[ws];
     const daysHtml = days.map(d=>{
       const isToday = isSameDay(d.date, today);
+      const lock = d.lockState;
+      const unlocked = isDayUnlocked(lock);
+      const disabledAttr = unlocked ? '' : 'disabled';
+      const lockedStyle = unlocked ? '' : 'opacity:.55;';
+
+      // etiqueta de estado
+      let stateTag = '';
+      if(lock==='atrasado') stateTag = '<span class="day-tag-atraso">ATRASADO</span>';
+      else if(lock==='concluido') stateTag = '<span class="day-tag-ok">CONCLUÍDO</span>';
+      else if(lock==='adiantar') stateTag = '<span class="day-tag-adiantar">LIBERADO P/ ADIANTAR</span>';
+      else if(lock==='travado') stateTag = '<span class="day-tag-travado">🔒 TRAVADO</span>';
+
       let inner;
       if(d.tarefaFinal){
-        inner = `<div class="chk-row"><div class="txt">${d.tarefaFinal}</div></div>`;
+        inner = `<div class="chk-row" style="${lockedStyle}"><div class="txt">${d.tarefaFinal}</div></div>`;
       } else if(d.novos.length===0 && d.revisoesEspacadas.length===0){
         inner = `<div class="empty-state">Dia livre.</div>`;
       } else {
@@ -1424,8 +1831,8 @@ function renderCronograma(){
         if(d.novos.length){
           novosHtml = `<div class="day-subhead">Conteúdo novo</div>` + d.novos.map(t=>{
             const st = c.topicStatus[t.id] || {};
-            return `<div class="chk-row">
-              <input type="checkbox" ${st.estudado?'checked':''} onchange="toggleTopicEstudado('${t.id}')">
+            return `<div class="chk-row" style="${lockedStyle}">
+              <input type="checkbox" ${st.estudado?'checked':''} ${disabledAttr} onchange="toggleTopicEstudado('${t.id}')">
               <div class="txt">
                 <span class="${st.estudado?'done':''}">${t.nome}</span>
                 <div class="meta">${t.blocoNome} · ~${t.min} min</div>
@@ -1436,25 +1843,30 @@ function renderCronograma(){
         }
         let revHtml = '';
         if(d.revisoesEspacadas.length){
-          revHtml = `<div class="day-subhead">Revisão espaçada</div>` + d.revisoesEspacadas.map(r=>`
-            <div class="chk-row">
-              <input type="checkbox" onchange="toggleReview('${r.temaId}',${r.revIndex})">
+          revHtml = `<div class="day-subhead">Revisão espaçada</div>` + d.revisoesEspacadas.map(r=>{
+            const st = c.topicStatus[r.temaId] || {};
+            const feita = r.revIndex===1 ? st.rev1Done : st.rev2Done;
+            return `<div class="chk-row" style="${lockedStyle}">
+              <input type="checkbox" ${feita?'checked':''} ${disabledAttr} onchange="toggleReview('${r.temaId}',${r.revIndex})">
               <div class="txt">
-                <span>${r.nome}</span>
+                <span class="${feita?'done':''}">${r.nome}</span>
                 <div class="meta">${r.blocoNome} · ${r.revIndex}ª revisão</div>
               </div>
               <div class="badges"><span class="badge revisado">Revisão ${r.revIndex}</span></div>
-            </div>`).join('');
+            </div>`;
+          }).join('');
         }
-        const qHtml = d.questoesSugestao ? `<div class="q-reminder">📝 Reserve ~10 min para resolver questões dos temas já vistos e registre em Desempenho.</div>` : '';
-        inner = novosHtml + revHtml + qHtml;
+        const qHtml = (unlocked && d.questoesSugestao) ? `<div class="q-reminder">📝 Reserve ~10 min para resolver questões dos temas já vistos e registre em Desempenho.</div>` : '';
+        const lockMsg = !unlocked ? `<div class="q-reminder" style="color:var(--ink-soft);">🔒 Conclua as metas dos dias anteriores (atrasados e de hoje) para liberar este dia.</div>` : '';
+        inner = novosHtml + revHtml + qHtml + lockMsg;
       }
-      return `<div class="day-row ${isToday?'today':''}">
+      return `<div class="day-row ${isToday?'today':''} ${lock==='atrasado'?'atrasado':''}">
         <div class="day-head">
           <span class="day-date">${fmtDate(d.date)}</span>
           <span class="day-name">${fmtWeekday(d.date)}</span>
           ${isToday?'<span class="day-tag-today">HOJE</span>':''}
           ${d.tarefaFinal?'<span class="day-tag-rev">REVISÃO FINAL</span>':''}
+          ${stateTag}
         </div>
         ${inner}
       </div>`;
@@ -1474,11 +1886,40 @@ function saveSettingsAndRegenerate(){
   const horas = parseFloat(document.getElementById('inpHoras').value) || 1;
   const revisao = parseInt(document.getElementById('inpRevisao').value,10);
   const dows = Array.from(document.querySelectorAll('#cronogramaContent [data-dow]:checked')).map(x=>parseInt(x.dataset.dow,10));
+  if(!confirm('Alterar as configurações vai REGERAR o plano de estudos do zero (as datas de cada tema serão redistribuídas). Seu registro de temas já estudados é mantido, mas o carimbo de qual dia estuda o quê muda. Deseja continuar?')) return;
   c.settings.startDate = inicio;
   c.settings.hoursPerDay = Math.max(0.25, horas);
   c.settings.diasRevisaoFinal = isNaN(revisao) ? 3 : Math.max(0,revisao);
   c.settings.diasDisponiveis = dows.length ? dows : [1,2,3,4,5,6];
+  c.plan = buildFrozenPlan(c); // regenera o plano congelado
   invalidateSchedule(); saveState(); renderAll();
+}
+function regeneratePlan(){
+  const c = getActiveConcurso();
+  if(!confirm('Regerar o plano vai redistribuir todos os temas nas datas novamente (mantendo o que você já marcou como estudado). Continuar?')) return;
+  c.plan = buildFrozenPlan(c);
+  invalidateSchedule(); saveState(); renderAll();
+}
+function lancarTempoMetas(){
+  const v = parseInt(document.getElementById('inpStudyMin').value,10);
+  if(!v || v<=0){ alert('Informe um número de minutos maior que zero.'); return; }
+  const c = getActiveConcurso();
+  c.studyMinutes = (Number(c.studyMinutes)||0) + v;
+  saveState(); renderAll();
+}
+function reiniciarProgresso(){
+  const c = getActiveConcurso();
+  if(!confirm('Isso vai APAGAR todo o progresso deste concurso (temas estudados, revisões, questões, redações, tempos) e gerar um plano novo a partir de hoje. Os outros concursos não são afetados. Tem certeza?')) return;
+  if(!confirm('Confirmação final: essa ação não pode ser desfeita. Reiniciar do zero?')) return;
+  c.topicStatus = {};
+  c.questionsLog = [];
+  c.essaysLog = [];
+  c.studyMinutes = 0;
+  c.pomodoroMinutes = 0;
+  c.settings.startDate = toISO(todayMidnight());
+  c.plan = buildFrozenPlan(c);
+  invalidateSchedule(); saveState(); renderAll();
+  alert('Progresso reiniciado. Bons estudos!');
 }
 
 /* =========================================================================
@@ -1620,6 +2061,7 @@ function renderDesempenho(){
       <td style="font-family:var(--font-mono); font-size:12px;">${q.date}</td>
       <td>${b?b.bloco:q.blocoId}${t?`<br><span class="stat-sub">${t.nome}</span>`:''}</td>
       <td style="font-family:var(--font-mono);">${q.acertos}/${q.total} (${pct}%)</td>
+      <td style="font-family:var(--font-mono); font-size:12px;">${q.minutos? fmtMinutes(q.minutos):'—'}</td>
       <td style="font-size:12px; color:var(--ink-soft);">${q.obs||''}</td>
       <td><button class="btn small secondary" onclick="deleteQuestionLog('${q.id}')">Excluir</button></td>
     </tr>`;
@@ -1654,6 +2096,10 @@ function renderDesempenho(){
           <div class="form-row">
             <label class="f-label">Acertos</label>
             <input type="number" id="qAcertos" min="0" step="1" placeholder="ex: 7">
+          </div>
+          <div class="form-row">
+            <label class="f-label">Tempo gasto (min)</label>
+            <input type="number" id="qMinutos" min="0" step="1" placeholder="ex: 25">
           </div>
         </div>
         <div class="form-row">
@@ -1695,7 +2141,7 @@ function renderDesempenho(){
 
     <section class="block">
       <h3 class="block-title"><span class="num">6</span> Histórico de sessões</h3>
-      ${logRows ? `<table class="data-table"><thead><tr><th>Data</th><th>Bloco / assunto</th><th>Resultado</th><th>Observações</th><th></th></tr></thead><tbody>${logRows}</tbody></table>` : '<div class="empty-state">Nenhum registro ainda.</div>'}
+      ${logRows ? `<table class="data-table"><thead><tr><th>Data</th><th>Bloco / assunto</th><th>Resultado</th><th>Tempo</th><th>Observações</th><th></th></tr></thead><tbody>${logRows}</tbody></table>` : '<div class="empty-state">Nenhum registro ainda.</div>'}
     </section>
   `;
 
@@ -1737,12 +2183,13 @@ function addQuestionLog(){
   const temaId = document.getElementById('qTema').value || null;
   const total = parseInt(document.getElementById('qTotal').value,10);
   const acertos = parseInt(document.getElementById('qAcertos').value,10);
+  const minutos = parseInt(document.getElementById('qMinutos').value,10) || 0;
   const obs = document.getElementById('qObs').value.trim();
   if(!total || total<=0 || isNaN(acertos) || acertos<0 || acertos>total){
     alert('Confira os números: total deve ser maior que zero e acertos não pode ser maior que o total.');
     return;
   }
-  c.questionsLog.push({ id: 'q'+Date.now(), date, blocoId, temaId, total, acertos, obs });
+  c.questionsLog.push({ id: 'q'+Date.now(), date, blocoId, temaId, total, acertos, minutos, obs });
   saveState();
   renderAll();
 }
